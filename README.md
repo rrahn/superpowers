@@ -28,6 +28,8 @@ Thanks!
 
 **Note:** Installation differs by platform. Claude Code has a built-in plugin system. Other platforms require manual setup.
 
+**Not sure which platform to use?** See [Platform Comparison Guide](docs/platform-comparison.md) to choose the best option for your needs.
+
 ### Claude Code (via Plugin Marketplace)
 
 In Claude Code, register the marketplace first:
