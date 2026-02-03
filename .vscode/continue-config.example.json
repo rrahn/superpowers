@@ -1,0 +1,106 @@
+{
+  "models": [
+    {
+      "title": "Claude 3.5 Sonnet",
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022",
+      "apiKey": "YOUR_ANTHROPIC_API_KEY"
+    }
+  ],
+  "customCommands": [
+    {
+      "name": "superpowers-init",
+      "description": "Initialize Superpowers framework with full context",
+      "prompt": "You now have Superpowers - a complete software development workflow built on composable skills.\n\nRead and internalize the following skill file: {{{ ~/.vscode/superpowers/skills/using-superpowers/SKILL.md }}}\n\n**CRITICAL INSTRUCTIONS:**\n1. You are now following the using-superpowers skill\n2. It is ALREADY LOADED - do NOT try to load it again\n3. Check for relevant skills BEFORE any response\n4. Use /skill command to load specific skills as needed\n\n**Tool Mapping for VS Code/Continue:**\n- `Skill` tool → Use `/skill <name>` slash command\n- `TodoWrite` → Use Continue's `update_plan` or create TODO/FIXME comments in code\n- `Task` tool with subagents → Break work into sequential steps (Continue doesn't support parallel agents)\n- `Read`, `Write`, `Edit`, `Bash` → Use Continue's native file and terminal operations\n\n**Skills Location:**\nAll skills are available in `~/.vscode/superpowers/skills/`\nLoad any skill with: `/skill <skill-name>`\n\n**Available Skills:**\n- brainstorming - Design refinement through Socratic questioning\n- writing-plans - Create detailed implementation plans\n- executing-plans - Execute plans in batches with checkpoints\n- test-driven-development - RED-GREEN-REFACTOR TDD workflow\n- systematic-debugging - 4-phase debugging process\n- requesting-code-review - Pre-review checklist\n- receiving-code-review - Respond to review feedback\n- using-git-worktrees - Parallel branch development\n- finishing-a-development-branch - Merge/PR workflows\n- subagent-driven-development - Fast iteration with reviews\n- dispatching-parallel-agents - Concurrent workflows (adapt to sequential)\n- verification-before-completion - Ensure fixes work\n- writing-skills - Create new skills\n\nReady to use Superpowers! Start with `/brainstorm` for design or `/plan` for implementation planning."
+    }
+  ],
+  "slashCommands": [
+    {
+      "name": "superpowers",
+      "description": "Activate Superpowers framework (shorter version)",
+      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/using-superpowers/SKILL.md }}}\n\nTool Mapping: Skill→/skill, TodoWrite→update_plan, Task→sequential\nUse /skill <name> to load specific skills."
+    },
+    {
+      "name": "skill",
+      "description": "Load a Superpowers skill by name",
+      "prompt": "Read and carefully follow all instructions in:\n{{{ ~/.vscode/superpowers/skills/{{{input}}}/SKILL.md }}}\n\nIf the skill has a checklist, follow it step by step.\nIf the skill references tools you don't have, use Continue equivalents."
+    },
+    {
+      "name": "brainstorm",
+      "description": "Interactive design refinement (Socratic questioning)",
+      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/brainstorming/SKILL.md }}}"
+    },
+    {
+      "name": "plan",
+      "description": "Create detailed implementation plan",
+      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/writing-plans/SKILL.md }}}"
+    },
+    {
+      "name": "execute",
+      "description": "Execute plan in batches with checkpoints",
+      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/executing-plans/SKILL.md }}}"
+    },
+    {
+      "name": "tdd",
+      "description": "Test-driven development workflow",
+      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/test-driven-development/SKILL.md }}}"
+    },
+    {
+      "name": "debug",
+      "description": "Systematic 4-phase debugging process",
+      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/systematic-debugging/SKILL.md }}}"
+    },
+    {
+      "name": "review",
+      "description": "Pre-code-review checklist",
+      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/requesting-code-review/SKILL.md }}}"
+    },
+    {
+      "name": "review-response",
+      "description": "Respond to code review feedback",
+      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/receiving-code-review/SKILL.md }}}"
+    },
+    {
+      "name": "worktree",
+      "description": "Git worktree workflow for parallel branches",
+      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/using-git-worktrees/SKILL.md }}}"
+    },
+    {
+      "name": "finish",
+      "description": "Complete development branch (merge/PR)",
+      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/finishing-a-development-branch/SKILL.md }}}"
+    },
+    {
+      "name": "verify",
+      "description": "Verification before marking work complete",
+      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/verification-before-completion/SKILL.md }}}"
+    }
+  ],
+  "contextProviders": [
+    {
+      "name": "diff",
+      "params": {}
+    },
+    {
+      "name": "terminal",
+      "params": {}
+    },
+    {
+      "name": "open",
+      "params": {
+        "onlyPinned": false
+      }
+    },
+    {
+      "name": "code",
+      "params": {}
+    }
+  ],
+  "allowAnonymousTelemetry": false,
+  "docs": [],
+  "tabAutocompleteModel": {
+    "title": "Claude 3.5 Sonnet",
+    "provider": "anthropic",
+    "model": "claude-3-5-sonnet-20241022"
+  }
+}

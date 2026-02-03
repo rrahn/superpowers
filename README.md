@@ -26,7 +26,7 @@ Thanks!
 
 ## Installation
 
-**Note:** Installation differs by platform. Claude Code has a built-in plugin system. Codex and OpenCode require manual setup.
+**Note:** Installation differs by platform. Claude Code has a built-in plugin system. Other platforms require manual setup.
 
 ### Claude Code (via Plugin Marketplace)
 
@@ -76,6 +76,25 @@ Fetch and follow instructions from https://raw.githubusercontent.com/obra/superp
 ```
 
 **Detailed docs:** [docs/README.opencode.md](docs/README.opencode.md)
+
+### VS Code
+
+VS Code doesn't have a native plugin system, but you can use Superpowers with Continue.dev or GitHub Copilot extensions.
+
+**Quick install with Continue.dev:**
+
+```bash
+# Install Continue extension
+code --install-extension Continue.continue
+
+# Clone Superpowers
+git clone https://github.com/obra/superpowers.git ~/.vscode/superpowers
+
+# Configure Continue (see docs for full config)
+# Edit ~/.continue/config.json to add Superpowers slash commands
+```
+
+**Detailed docs:** [docs/README.vscode.md](docs/README.vscode.md)
 
 ## The Basic Workflow
 
