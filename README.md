@@ -81,19 +81,19 @@ Fetch and follow instructions from https://raw.githubusercontent.com/obra/superp
 
 ### VS Code
 
-VS Code doesn't have a native plugin system, but you can use Superpowers with Continue.dev or GitHub Copilot extensions.
+VS Code doesn't have a native plugin system, but you can use Superpowers with GitHub Copilot Chat.
 
-**Quick install with Continue.dev:**
+**Quick install with GitHub Copilot:**
 
 ```bash
-# Install Continue extension
-code --install-extension Continue.continue
+# Install Copilot extensions
+code --install-extension GitHub.copilot-chat
 
 # Clone Superpowers
 git clone https://github.com/obra/superpowers.git ~/.vscode/superpowers
 
-# Configure Continue (see docs for full config)
-# Edit ~/.continue/config.json to add Superpowers slash commands
+# Copy snippets (see docs for platform-specific paths)
+# Use !superpowers in Copilot Chat to activate
 ```
 
 **Detailed docs:** [docs/README.vscode.md](docs/README.vscode.md)

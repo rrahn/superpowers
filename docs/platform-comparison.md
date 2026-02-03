@@ -4,19 +4,19 @@ This guide helps you choose the right platform for using Superpowers.
 
 ## Quick Comparison
 
-| Feature | Claude Code | OpenCode | Codex | VS Code (Continue) | VS Code (Copilot) |
-|---------|-------------|----------|-------|-------------------|-------------------|
-| **Setup Time** | 2 min | 5 min | 5 min | 5 min | 10 min |
-| **Native Plugin** | ✅ | ✅ | ⚠️ CLI | ❌ | ❌ |
-| **Auto Context** | ✅ | ✅ | ❌ | ❌ | ❌ |
-| **Skill Discovery** | ✅ Auto | ✅ Auto | 🔧 CLI | 🔧 Config | 🔧 Snippets |
-| **Slash Commands** | ✅ | ✅ | 🔧 CLI | ✅ | ❌ |
-| **Parallel Agents** | ✅ | ⚠️ Limited | ❌ | ❌ | ❌ |
-| **TodoWrite Tool** | ✅ | ⚠️ update_plan | ⚠️ update_plan | ⚠️ update_plan | ⚠️ Comments |
-| **Personal Skills** | ✅ | ✅ | ✅ | ✅ | ⚠️ Manual |
-| **Project Skills** | ✅ | ✅ | ✅ | ✅ | ⚠️ Snippets |
-| **Cost** | $ Subscription | Free/Paid | $ API | $ API | $ Subscription |
-| **Ease of Use** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
+| Feature | Claude Code | OpenCode | Codex | VS Code (Copilot) |
+|---------|-------------|----------|-------|-------------------|
+| **Setup Time** | 2 min | 5 min | 5 min | 5-10 min |
+| **Native Plugin** | ✅ | ✅ | ⚠️ CLI | ❌ |
+| **Auto Context** | ✅ | ✅ | ❌ | ❌ |
+| **Skill Discovery** | ✅ Auto | ✅ Auto | 🔧 CLI | 🔧 Snippets |
+| **Slash Commands** | ✅ | ✅ | 🔧 CLI | ❌ |
+| **Parallel Agents** | ✅ | ⚠️ Limited | ❌ | ❌ |
+| **TodoWrite Tool** | ✅ | ⚠️ update_plan | ⚠️ update_plan | ⚠️ Comments |
+| **Personal Skills** | ✅ | ✅ | ✅ | ✅ |
+| **Project Skills** | ✅ | ✅ | ✅ | ✅ |
+| **Cost** | $ Subscription | Free/Paid | $ API | $ Subscription |
+| **Ease of Use** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
 
 **Legend:**
 - ✅ Full support
@@ -100,34 +100,7 @@ This guide helps you choose the right platform for using Superpowers.
 
 **Setup Effort:** ⭐⭐ (5 minutes)
 
-### 4. VS Code with Continue.dev (Good Compromise)
-
-**Pros:**
-- Works with existing VS Code setup
-- Supports multiple AI models (Claude, GPT, local)
-- Slash commands for skills
-- Open source
-- Active development
-- Large user base
-- Good documentation
-- Best for: VS Code users, multi-model users, developers wanting flexibility
-
-**Cons:**
-- Manual skill loading each session
-- No automatic context
-- No parallel agents
-- File reading overhead
-- More setup than Claude Code
-
-**Best For:**
-- VS Code users
-- Developers wanting model flexibility
-- Teams with existing VS Code workflows
-- Open source advocates
-
-**Setup Effort:** ⭐⭐⭐ (5-10 minutes)
-
-### 5. VS Code with GitHub Copilot (Workable)
+### 4. VS Code with GitHub Copilot
 
 **Pros:**
 - Works with GitHub Copilot subscription
@@ -160,8 +133,7 @@ This guide helps you choose the right platform for using Superpowers.
 | Claude Code | Automatic + `Skill` tool | ⭐⭐⭐⭐⭐ |
 | OpenCode | `skill` tool | ⭐⭐⭐⭐⭐ |
 | Codex | CLI commands | ⭐⭐⭐⭐ |
-| Continue | `/skill` slash command | ⭐⭐⭐⭐ |
-| Copilot | Manual reference in chat | ⭐⭐⭐ |
+| VS Code (Copilot) | Snippet expansion + manual reference | ⭐⭐⭐ |
 
 ### Workflow Efficiency
 
@@ -172,8 +144,7 @@ This guide helps you choose the right platform for using Superpowers.
 | Claude Code | 2 min | 0 min (auto) |
 | OpenCode | 5 min | 0 min (auto) |
 | Codex | 5 min | 1 min (CLI) |
-| Continue | 5 min | 30 sec (/superpowers) |
-| Copilot | 10 min | 2 min (snippets) |
+| VS Code (Copilot) | 5-10 min | 1-2 min (snippets) |
 
 ### Model Support
 
@@ -182,8 +153,7 @@ This guide helps you choose the right platform for using Superpowers.
 | Claude Code | Claude only | Low |
 | OpenCode | Multiple* | High |
 | Codex | OpenAI | Medium |
-| Continue | Any (Claude, GPT, local) | Very High |
-| Copilot | GitHub models | Low |
+| VS Code (Copilot) | GitHub models | Low |
 
 *OpenCode model support depends on configuration
 
@@ -196,8 +166,7 @@ This guide helps you choose the right platform for using Superpowers.
 | Claude Code | ~$20-30/mo | Subscription |
 | OpenCode | $0-50/mo | API costs only |
 | Codex | $10-100/mo | API costs vary |
-| Continue | $10-100/mo | API costs vary |
-| Copilot | $10-20/mo | Subscription |
+| VS Code (Copilot) | $10-20/mo | Subscription |
 
 Costs vary based on usage patterns.
 
@@ -211,66 +180,67 @@ Costs vary based on usage patterns.
 - Support
 
 ### Open Source Project
-**Recommendation:** OpenCode or Continue
+**Recommendation:** OpenCode
 - Open source tools
 - Free infrastructure
 - Community support
 - Flexible models
 
 ### Solo Developer (Budget-Conscious)
-**Recommendation:** Continue.dev
-- Pay per use (API)
-- Multi-model support
-- VS Code integration
-- Active community
+**Recommendation:** VS Code with Copilot
+- Subscription-based (predictable cost)
+- Works with existing VS Code
+- GitHub integration
+- Active development
 
 ### Existing VS Code User
-**Recommendation:** Continue.dev
+**Recommendation:** VS Code with Copilot
 - No workflow change
 - Keep existing extensions
 - Familiar environment
 - Easy integration
 
 ### Existing Copilot User
-**Recommendation:** Continue.dev or Copilot + Superpowers
-- Already paying for Copilot? Add skills via snippets
-- Want better experience? Try Continue.dev
-- Both options available
+**Recommendation:** Add Superpowers via Snippets
+- Already paying for Copilot
+- Simple snippets setup
+- No additional cost
+- Enhanced workflows
 
 ### Heavy Automation User
-**Recommendation:** Codex or Continue
+**Recommendation:** Codex or OpenCode
 - CLI integration
 - Scriptable
 - CI/CD friendly
 - Flexible
 
 ### Learning AI-Assisted Development
-**Recommendation:** Continue.dev
+**Recommendation:** VS Code with Copilot
 - Lower barrier to entry
 - Good documentation
 - Active community
-- Flexible models
+- Works with familiar editor
 
 ## Migration Paths
 
 ### From Claude Code to VS Code
 1. Export personal skills
-2. Install Continue.dev
-3. Convert skills to Continue config
+2. Copy skills to VS Code location
+3. Set up snippets
 4. Test workflows
 
 **Effort:** Medium (2-3 hours)
 
-### From Copilot to Continue
-1. Keep Copilot for completions
-2. Install Continue for chat/skills
-3. Use both together
-4. Gradually transition
+### From Copilot to Enhanced Copilot
+1. Already have Copilot
+2. Clone Superpowers repository
+3. Set up snippets
+4. Start using skills
 
-**Effort:** Low (1 hour)
+**Effort:** Low (30 minutes)
 
-### From Continue to Claude Code
-1. Export Continue config
+### From VS Code to Claude Code
+1. Export snippets and skills
 2. Install Claude Code plugin
 3. Skills work automatically
 4. Enhanced features available
@@ -279,8 +249,8 @@ Costs vary based on usage patterns.
 
 ### From OpenCode to VS Code
 1. Skills compatible
-2. Install Continue
-3. Map skills to slash commands
+2. Set up Copilot Chat
+3. Create snippets for skills
 4. Adjust tool references
 
 **Effort:** Medium (2 hours)
@@ -293,22 +263,22 @@ Choose based on priorities:
 → Claude Code
 
 **Priority: Open Source**
-→ OpenCode or Continue.dev
+→ OpenCode
 
 **Priority: Cost**
-→ Continue.dev (pay per use)
+→ VS Code with Copilot (subscription)
 
 **Priority: VS Code**
-→ Continue.dev
+→ VS Code with Copilot
 
 **Priority: Existing Copilot**
-→ Continue.dev or Copilot + Snippets
+→ Add Superpowers via Snippets
 
 **Priority: Automation**
-→ Codex or Continue.dev
+→ Codex or OpenCode
 
 **Priority: Flexibility**
-→ Continue.dev
+→ OpenCode
 
 **Priority: Team Features**
 → Claude Code
@@ -321,14 +291,14 @@ Native integration, full features, best UX
 ### 🥈 Best Open Source: OpenCode
 Native skills, good integration, free
 
-### 🥉 Best for VS Code: Continue.dev
-Flexible, multi-model, active development
+### 🥉 Best for VS Code: GitHub Copilot + Superpowers
+Works with existing setup, snippet-based
 
-### 🎖️ Best Value: Continue.dev
-Pay per use, no subscription, flexible
+### 🎖️ Best Value: GitHub Copilot + Superpowers
+Use existing subscription, no additional cost
 
-### 🏅 Best for Beginners: Continue.dev
-Good docs, large community, easy setup
+### 🏅 Best for Beginners: VS Code with Copilot
+Familiar editor, good docs, easy to start
 
 ## Getting Started
 
@@ -346,14 +316,7 @@ git clone https://github.com/obra/superpowers.git ~/.config/opencode/superpowers
 # Follow: docs/README.opencode.md
 ```
 
-**Continue.dev:**
-```bash
-code --install-extension Continue.continue
-git clone https://github.com/obra/superpowers.git ~/.vscode/superpowers
-# Follow: .vscode/QUICKSTART.md
-```
-
-**Copilot:**
+**VS Code with Copilot:**
 ```bash
 code --install-extension GitHub.copilot-chat
 git clone https://github.com/obra/superpowers.git ~/.vscode/superpowers
@@ -362,9 +325,9 @@ git clone https://github.com/obra/superpowers.git ~/.vscode/superpowers
 
 ## Still Undecided?
 
-Try Continue.dev first:
-- Easy to set up
-- Works with multiple models
+Try VS Code with Copilot if you're already using it:
+- Simple snippet setup
+- Works with existing subscription
 - Can switch to other platforms later
 - Good introduction to Superpowers
 

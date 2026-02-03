@@ -1,19 +1,20 @@
-# VS Code Superpowers Quick Start
+# VS Code Superpowers Quick Start with GitHub Copilot Chat
 
-Get up and running with Superpowers in VS Code in 5 minutes.
+Get up and running with Superpowers in VS Code using GitHub Copilot in 5 minutes.
 
 ## Prerequisites
 
 - VS Code installed
-- Continue.dev extension (or GitHub Copilot Chat)
-- An Anthropic API key (for Claude) or other LLM provider
+- GitHub Copilot subscription
+- Git installed
 
-## Option 1: Continue.dev (Recommended)
+## Quick Install
 
-### 1. Install Continue
+### 1. Install GitHub Copilot Extensions
 
 ```bash
-code --install-extension Continue.continue
+code --install-extension GitHub.copilot
+code --install-extension GitHub.copilot-chat
 ```
 
 ### 2. Clone Superpowers
@@ -28,103 +29,40 @@ git clone https://github.com/obra/superpowers.git ~/.vscode/superpowers
 git clone https://github.com/obra/superpowers.git "$env:USERPROFILE\.vscode\superpowers"
 ```
 
-### 3. Copy Example Config
+### 3. Copy Snippets (Global - Recommended)
 
-**macOS / Linux:**
+**macOS:**
 ```bash
-# Create Continue config directory
-mkdir -p ~/.continue
+mkdir -p ~/Library/Application\ Support/Code/User/snippets/
+cp ~/.vscode/superpowers/.vscode/superpowers.code-snippets ~/Library/Application\ Support/Code/User/snippets/
+```
 
-# Copy example config
-cp ~/.vscode/superpowers/.vscode/continue-config.example.json ~/.continue/config.json
-
-# Edit to add your API key
-# Replace YOUR_ANTHROPIC_API_KEY with your actual key
+**Linux:**
+```bash
+mkdir -p ~/.config/Code/User/snippets/
+cp ~/.vscode/superpowers/.vscode/superpowers.code-snippets ~/.config/Code/User/snippets/
 ```
 
 **Windows (PowerShell):**
 ```powershell
-# Create Continue config directory
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.continue"
-
-# Copy example config
-Copy-Item "$env:USERPROFILE\.vscode\superpowers\.vscode\continue-config.example.json" "$env:USERPROFILE\.continue\config.json"
-
-# Edit to add your API key
-# Replace YOUR_ANTHROPIC_API_KEY with your actual key
+New-Item -ItemType Directory -Force -Path "$env:APPDATA\Code\User\snippets"
+Copy-Item "$env:USERPROFILE\.vscode\superpowers\.vscode\superpowers.code-snippets" "$env:APPDATA\Code\User\snippets\"
 ```
 
-### 4. Edit Config
+### 4. Test It!
 
-Open `~/.continue/config.json` (or `%USERPROFILE%\.continue\config.json` on Windows) and replace:
-```json
-"apiKey": "YOUR_ANTHROPIC_API_KEY"
-```
-
-With your actual Anthropic API key.
-
-### 5. Test It!
-
-1. Restart VS Code
-2. Open Continue sidebar: `Ctrl+Shift+L` (Windows/Linux) or `Cmd+Shift+L` (Mac)
-3. Type: `/superpowers`
-4. You should see it load the framework!
-
-### 6. Try a Skill
-
-Type any of these:
-- `/brainstorm` - Start a design discussion
-- `/plan` - Create an implementation plan
-- `/tdd` - Switch to test-driven development mode
-- `/debug` - Load systematic debugging
-
-## Option 2: GitHub Copilot
-
-### 1. Install Copilot
-
-```bash
-code --install-extension GitHub.copilot
-code --install-extension GitHub.copilot-chat
-```
-
-### 2. Clone Superpowers
-
-Same as Continue.dev instructions above.
-
-### 3. Copy Snippets to Your Project
-
-In your project, create `.vscode/` directory:
-```bash
-mkdir -p .vscode
-cp ~/.vscode/superpowers/.vscode/superpowers.code-snippets .vscode/
-```
-
-### 4. Use Snippets
-
-1. Open Copilot Chat: `Ctrl+Shift+I` (Windows/Linux) or `Cmd+Shift+I` (Mac)
-2. Type `!superpowers` in the chat input and press Tab
-3. Press Enter to send the message
-4. Copilot will load the framework!
-
-**Note:** With Copilot, you need to load the framework manually each session.
+1. Restart VS Code (or reload: Ctrl+Shift+P → "Reload Window")
+2. Open Copilot Chat: `Ctrl+Shift+I` (Windows/Linux) or `Cmd+Shift+I` (Mac)
+3. Type: `!superpowers` and press Tab
+4. You should see the snippet expand!
+5. Press Enter to send to Copilot
+6. Copilot will load the framework
 
 ## Quick Reference
 
-### Continue.dev Commands
+### Available Snippets
 
-| Command | Purpose |
-|---------|---------|
-| `/superpowers` | Load framework |
-| `/brainstorm` | Design refinement |
-| `/plan` | Implementation planning |
-| `/tdd` | Test-driven development |
-| `/debug` | Systematic debugging |
-| `/review` | Pre-code-review check |
-| `/skill <name>` | Load any skill |
-
-### GitHub Copilot Snippets
-
-Type in chat and press Tab:
+Type in Copilot Chat and press Tab:
 
 | Snippet | Purpose |
 |---------|---------|
@@ -134,113 +72,157 @@ Type in chat and press Tab:
 | `!tdd` | Test-driven development |
 | `!debug` | Systematic debugging |
 | `!review` | Pre-code-review check |
-| `!skill` | Load specific skill |
+| `!verify` | Verify completion |
+| `!skill` | Load any skill by name |
+| `!skills` | List all available skills |
+
+### Usage Pattern
+
+1. Type snippet prefix (e.g., `!brainstorm`)
+2. Press **Tab** to expand
+3. Press **Enter** to send to Copilot
 
 ## Example Workflows
 
 ### Creating a New Feature
 
-**Continue.dev:**
 ```
-1. /superpowers
-2. /brainstorm
-   [Answer questions to refine design]
-3. /plan
-   [Get implementation plan]
-4. /tdd
-   [Implement with test-first approach]
-5. /review
-   [Check before submitting]
-```
+Open Copilot Chat (Ctrl+Shift+I)
 
-**GitHub Copilot:**
-```
-1. Type: !superpowers [Tab] [Enter]
-2. Type: !brainstorm [Tab] [Enter]
-   [Answer questions to refine design]
-3. Type: !plan [Tab] [Enter]
-   [Get implementation plan]
-4. Type: !tdd [Tab] [Enter]
-   [Implement with test-first approach]
-5. Type: !review [Tab] [Enter]
-   [Check before submitting]
+1. !superpowers [Tab] [Enter]
+   → Framework loads
+
+2. !brainstorm [Tab] [Enter]
+   → Answer design questions
+
+3. !plan [Tab] [Enter]
+   → Get implementation plan
+
+4. !tdd [Tab] [Enter]
+   → Implement with TDD
+
+5. !review [Tab] [Enter]
+   → Check before submitting
 ```
 
 ### Debugging an Issue
 
-**Continue.dev:**
 ```
-1. /superpowers
-2. /debug
-   [Follow 4-phase debugging process]
-3. /verify
-   [Ensure fix actually works]
+Open Copilot Chat
+
+1. !superpowers [Tab] [Enter]
+   → Load framework
+
+2. !debug [Tab] [Enter]
+   → Follow 4-phase debugging
+
+3. !verify [Tab] [Enter]
+   → Ensure fix works
 ```
 
-**GitHub Copilot:**
+### Code Review
+
 ```
+Open Copilot Chat
+
 1. !superpowers [Tab] [Enter]
-2. !debug [Tab] [Enter]
-   [Follow 4-phase debugging process]
-3. !verify [Tab] [Enter]
-   [Ensure fix actually works]
+   → Load framework
+
+2. !review [Tab] [Enter]
+   → Run pre-review checklist
 ```
 
 ## Troubleshooting
 
+### Snippets not expanding
+
+1. **Check snippet location:**
+   - Mac: `~/Library/Application Support/Code/User/snippets/`
+   - Windows: `%APPDATA%\Code\User\snippets\`
+   - Linux: `~/.config/Code/User/snippets/`
+
+2. **Restart VS Code:**
+   - Ctrl+Shift+P → "Reload Window"
+
+3. **Try in Copilot Chat:**
+   - Snippets only work in Chat input
+   - Press Tab after typing prefix
+
 ### "File not found" errors
 
-Check your paths:
-- Continue config should reference `~/.vscode/superpowers/skills/...`
-- On Windows, use forward slashes: `C:/Users/...` or escape backslashes: `C:\\Users\\...`
+1. **Verify clone:**
+   ```bash
+   ls ~/.vscode/superpowers/skills/
+   ```
 
-### Continue not showing slash commands
+2. **Check paths:**
+   - Snippets use `~/.vscode/superpowers/`
+   - This should work on all platforms
 
-1. Check config syntax - ensure valid JSON (no trailing commas)
-2. Restart VS Code
-3. Check Continue output: View → Output → Continue
+### Copilot not following instructions
 
-### Copilot snippets not working
+1. **Load framework first:**
+   - Always start with `!superpowers`
 
-1. Ensure `.vscode/superpowers.code-snippets` exists in your project
-2. Try typing the prefix and pressing Tab
-3. Check VS Code snippets: File → Preferences → User Snippets
-
-### Skills not loading
-
-1. Verify clone: `ls ~/.vscode/superpowers/skills/`
-2. Check file paths in config match your installation
-3. Try absolute paths instead of `~`
+2. **New session needed:**
+   - Start fresh Copilot Chat
+   - Reload framework
 
 ## Next Steps
 
-- **Full docs**: [.vscode/INSTALL.md](../.vscode/INSTALL.md)
-- **Platform comparison**: [docs/README.vscode.md](../docs/README.vscode.md)
-- **Create personal skills**: Add to `~/.vscode/superpowers-personal/`
-- **Project config**: Add `.continue/config.json` to your projects
+- **Full docs:** [INSTALL.md](INSTALL.md)
+- **All skills:** See `~/.vscode/superpowers/skills/` directory
+- **Create custom skills:** Add to `~/.vscode/superpowers-personal/`
+
+## Tips
+
+### Start Every Session with Framework
+
+Always begin new Copilot Chat sessions with:
+```
+!superpowers [Tab] [Enter]
+```
+
+This establishes the Superpowers context.
+
+### Use Skill Shortcuts
+
+Instead of manually typing file paths, use the shortcuts:
+- `!brainstorm` instead of typing the full path
+- `!tdd` instead of referencing the TDD skill file
+- etc.
+
+### Project-Specific Setup
+
+For team projects, copy snippets to `.vscode/`:
+```bash
+mkdir -p .vscode
+cp ~/.vscode/superpowers/.vscode/superpowers.code-snippets .vscode/
+```
+
+Team members just need to clone your project to get the snippets.
+
+## Platform Note
+
+**GitHub Copilot in VS Code** provides a functional Superpowers experience, but with some limitations:
+
+- ⚠️ Manual loading each session (no auto-context)
+- ⚠️ Snippet-based (no native slash commands)
+- ⚠️ No parallel agent support
+
+For the best experience, consider **[Claude Code](https://claude.ai/code)** which has:
+- ✅ Native plugin support
+- ✅ Automatic context injection
+- ✅ All features working out of the box
+
+But if you're already using VS Code and Copilot, Superpowers still provides valuable workflows!
 
 ## Getting Help
 
 - Issues: https://github.com/obra/superpowers/issues
-- Continue docs: https://docs.continue.dev
+- Main docs: https://github.com/obra/superpowers
 - Copilot docs: https://docs.github.com/copilot
 
-## What's Next?
+---
 
-Once you're comfortable with the basics:
-
-1. **Learn the skills** - Explore `~/.vscode/superpowers/skills/` to see what's available
-2. **Create personal skills** - Add your own workflows
-3. **Configure projects** - Add project-specific configs
-4. **Share configs** - Help others get started
-
-## Platform Comparison
-
-| Feature | Claude Code | Continue.dev | Copilot |
-|---------|-------------|--------------|---------|
-| Setup time | 2 min | 5 min | 10 min |
-| Auto-context | ✅ | ❌ | ❌ |
-| Slash commands | ✅ | ✅ | ❌ |
-| Ease of use | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
-
-For the best experience, consider [Claude Code](https://claude.ai/code) with native plugin support!
+**Ready to go!** Open Copilot Chat and type `!superpowers` to get started. 🚀

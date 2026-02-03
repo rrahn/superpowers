@@ -1,114 +1,94 @@
-# Superpowers for VS Code
+# Superpowers for VS Code with GitHub Copilot Chat
 
-Complete guide for using Superpowers with Visual Studio Code AI coding assistants.
+Complete guide for using Superpowers with Visual Studio Code and GitHub Copilot Chat.
 
 ## Overview
 
-Unlike Claude Code or OpenCode, VS Code doesn't have a native plugin system for AI agent skills. However, you can integrate Superpowers with popular VS Code AI extensions:
+VS Code doesn't have a native plugin system for AI agent skills like Claude Code or OpenCode. To use Superpowers with VS Code, we leverage **GitHub Copilot Chat** through VS Code code snippets.
 
-- **[Continue.dev](https://continue.dev)** - Best option, supports custom commands and context providers
-- **[GitHub Copilot Chat](https://github.com/features/copilot)** - Works with manual skill loading
+This provides a functional integration that brings Superpowers workflows to the world's most popular code editor.
 
-## Quick Install (Continue.dev)
+## Quick Install
 
-**Step 1:** Install Continue extension
+**Requirements:**
+- VS Code
+- GitHub Copilot subscription
+- Git
+
+**Setup (5 minutes):**
 ```bash
-code --install-extension Continue.continue
-```
+# 1. Install Copilot extensions
+code --install-extension GitHub.copilot
+code --install-extension GitHub.copilot-chat
 
-**Step 2:** Clone Superpowers
-```bash
+# 2. Clone Superpowers
 git clone https://github.com/obra/superpowers.git ~/.vscode/superpowers
+
+# 3. Copy snippets (macOS example)
+mkdir -p ~/Library/Application\ Support/Code/User/snippets/
+cp ~/.vscode/superpowers/.vscode/superpowers.code-snippets ~/Library/Application\ Support/Code/User/snippets/
+
+# 4. Restart VS Code and use: !superpowers in Copilot Chat
 ```
 
-**Step 3:** Configure Continue
-
-Edit `~/.continue/config.json` (create if it doesn't exist):
-
-```json
-{
-  "models": [
-    {
-      "title": "Claude 3.5 Sonnet",
-      "provider": "anthropic",
-      "model": "claude-3-5-sonnet-20241022",
-      "apiKey": "YOUR_ANTHROPIC_API_KEY"
-    }
-  ],
-  "slashCommands": [
-    {
-      "name": "superpowers",
-      "description": "Load Superpowers framework",
-      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/using-superpowers/SKILL.md }}}\n\n**Tool Mapping:** Skill tool → Continue slash commands, TodoWrite → update_plan, Task → sequential steps"
-    },
-    {
-      "name": "skill",
-      "description": "Load a specific skill",
-      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/{{{input}}}/SKILL.md }}}"
-    },
-    {
-      "name": "brainstorm",
-      "description": "Design refinement",
-      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/brainstorming/SKILL.md }}}"
-    },
-    {
-      "name": "plan",
-      "description": "Implementation planning",
-      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/writing-plans/SKILL.md }}}"
-    },
-    {
-      "name": "tdd",
-      "description": "Test-driven development",
-      "prompt": "Read and follow {{{ ~/.vscode/superpowers/skills/test-driven-development/SKILL.md }}}"
-    }
-  ]
-}
-```
-
-**Step 4:** Use it
-- Open Continue sidebar (Ctrl+Shift+L)
-- Type `/superpowers` to activate
-- Use `/brainstorm`, `/plan`, `/tdd`, etc.
+See [.vscode/QUICKSTART.md](../.vscode/QUICKSTART.md) for platform-specific instructions.
 
 ## Full Documentation
 
-See [.vscode/INSTALL.md](../.vscode/INSTALL.md) for:
-- Detailed installation for both Continue.dev and GitHub Copilot
-- Windows-specific instructions
-- Personal skills setup
-- Project-specific configuration
-- Troubleshooting guide
+- **[.vscode/INSTALL.md](../.vscode/INSTALL.md)** - Complete installation guide (all platforms)
+- **[.vscode/QUICKSTART.md](../.vscode/QUICKSTART.md)** - 5-minute setup guide
+- **[.vscode/TESTING.md](../.vscode/TESTING.md)** - Testing and verification
 
 ## How It Works
 
 ### Architecture
 
-Unlike platforms with native plugin support:
+Unlike platforms with native plugin support, VS Code integration uses a snippet-based approach:
 
-1. **Skills are loaded via file reading** - Continue reads markdown files from `~/.vscode/superpowers/skills/`
-2. **Slash commands trigger skill loading** - `/brainstorm` loads the brainstorming skill
-3. **No automatic context** - You must explicitly load skills each session
-4. **Sequential execution** - No parallel agent support
+```
+Code Snippet → Expand in Chat → File Read → Copilot Follows Instructions
+     ↓              ↓               ↓                    ↓
+ !superpowers    [Tab]         Read SKILL.md      Apply framework
+```
+
+**Workflow:**
+1. User types snippet prefix in Copilot Chat (e.g., `!superpowers`)
+2. Presses Tab to expand snippet
+3. Snippet contains instruction to read skill file
+4. Presses Enter to send to Copilot
+5. Copilot reads the skill markdown file
+6. Copilot follows the skill instructions
 
 ### Skill Discovery
 
-Continue.dev uses slash commands configured in `~/.continue/config.json`. Each command reads a skill file and instructs the AI to follow it.
+Skills are loaded manually via snippets:
+
+| Snippet | Skill | Purpose |
+|---------|-------|---------|
+| `!superpowers` | Framework | Core framework |
+| `!brainstorm` | Brainstorming | Design refinement |
+| `!plan` | Writing Plans | Implementation planning |
+| `!tdd` | Test-Driven Development | TDD workflow |
+| `!debug` | Systematic Debugging | Debugging process |
+| `!review` | Code Review | Pre-review checklist |
+| `!verify` | Verification | Verify completion |
+| `!skill` | Generic | Load any skill by name |
 
 ### Tool Mapping
 
-When skills reference Claude Code tools, use these equivalents:
+When skills reference Claude Code tools, Copilot Chat uses these equivalents:
 
-| Claude Code | VS Code/Continue |
-|-------------|------------------|
-| `Skill` tool | Continue slash commands (`/skill name`) |
-| `TodoWrite` | `update_plan` or TODO comments |
-| `Task` with subagents | Break into sequential steps |
-| File operations | Native Continue file operations |
+| Claude Code | GitHub Copilot Chat |
+|-------------|---------------------|
+| `Skill` tool | Snippet expansion + file reading |
+| `TodoWrite` | TODO/FIXME comments in code |
+| `Task` with subagents | Sequential steps (no parallel) |
+| `Read`, `Write`, `Edit` | Native Copilot file operations |
 | `Bash` | VS Code integrated terminal |
 
 ## Available Skills
 
-All skills from the core Superpowers library are available:
+All skills from the core Superpowers library work with Copilot Chat:
 
 **Development Workflows:**
 - `brainstorming` - Interactive design refinement
@@ -131,108 +111,231 @@ All skills from the core Superpowers library are available:
 - `using-superpowers` - Framework introduction
 - `writing-skills` - Create new skills
 
-Load any skill with:
-```
-/skill <skill-name>
-```
-
-## Differences from Claude Code
-
-### What's Missing
-
-1. **Automatic skill activation** - Must manually load skills
-2. **Native tool integration** - Skills loaded via file reading
-3. **Parallel agents** - Must use sequential execution
-4. **TodoWrite tool** - Use Continue's `update_plan` instead
-
-### What Works
-
-1. **All skill content** - Full skill library available
-2. **Workflows** - TDD, brainstorming, planning all work
-3. **Personal skills** - Create your own in `~/.vscode/superpowers-personal/`
-4. **Project skills** - Project-specific skills via `.continue/config.json`
+Load any skill with the corresponding snippet (e.g., `!tdd` for test-driven development).
 
 ## Workflow Examples
 
 ### Starting a New Feature
 
 ```
-1. /superpowers          # Load framework
-2. /brainstorm           # Design the feature
-3. /plan                 # Create implementation plan
-4. /tdd                  # Switch to TDD mode
-5. [implement]
-6. /skill requesting-code-review  # Pre-review check
+Open Copilot Chat (Ctrl+Shift+I / Cmd+Shift+I)
+
+1. !superpowers [Tab] [Enter]       # Load framework
+2. !brainstorm [Tab] [Enter]        # Design the feature
+3. Answer Copilot's questions
+4. !plan [Tab] [Enter]              # Create implementation plan
+5. !tdd [Tab] [Enter]               # Switch to TDD mode
+6. Implement the feature
+7. !review [Tab] [Enter]            # Pre-review check
 ```
 
 ### Debugging an Issue
 
 ```
-1. /superpowers          # Load framework
-2. /debug                # Load systematic debugging
-3. [follow the process]
-4. /skill verification-before-completion  # Verify fix
+Open Copilot Chat
+
+1. !superpowers [Tab] [Enter]       # Load framework
+2. !debug [Tab] [Enter]             # Load systematic debugging
+3. Follow the 4-phase process
+4. !verify [Tab] [Enter]            # Verify fix works
 ```
 
 ### Code Review
 
 ```
-1. /superpowers          # Load framework
-2. /skill requesting-code-review  # Before submitting
+Open Copilot Chat
+
+1. !superpowers [Tab] [Enter]       # Load framework
+2. !review [Tab] [Enter]            # Pre-review checklist
    [or]
-3. /skill receiving-code-review   # Responding to feedback
+3. !review-response [Tab] [Enter]   # Respond to feedback
 ```
 
 ## Project Configuration
 
-### Per-Project Setup
+### Team Setup
 
-Create `.continue/config.json` in your project root to enable Superpowers automatically for that project:
+For team projects, include snippets in the repository:
 
+```bash
+# In your project root
+mkdir -p .vscode
+cp ~/.vscode/superpowers/.vscode/superpowers.code-snippets .vscode/
+```
+
+Add to `.vscode/settings.json`:
 ```json
 {
-  "slashCommands": [
-    {
-      "name": "init",
-      "description": "Initialize with Superpowers",
-      "prompt": "Read {{{ ~/.vscode/superpowers/skills/using-superpowers/SKILL.md }}} and activate Superpowers framework. Use /brainstorm to start design discussions."
-    }
-  ]
+  "files.associations": {
+    "*.code-snippets": "jsonc"
+  }
 }
 ```
 
-Then developers just type `/init` when opening the project.
+Team members clone the project and get snippets automatically.
 
 ### Project-Specific Skills
 
-Add project-specific workflows:
+Create project-specific skills in `.vscode/skills/`:
 
+```bash
+mkdir -p .vscode/skills/my-project-workflow
+```
+
+Create `.vscode/skills/my-project-workflow/SKILL.md`:
+```markdown
+---
+name: my-project-workflow
+description: Use for this project's specific workflow
+---
+
+# Project Workflow
+
+[Your project-specific instructions]
+```
+
+Add snippet to `.vscode/superpowers.code-snippets`:
 ```json
 {
-  "slashCommands": [
-    {
-      "name": "api",
-      "description": "Our API development workflow",
-      "prompt": "Follow our API development process:\n1. Load /tdd for test-driven development\n2. Ensure OpenAPI spec is updated\n3. Add integration tests\n4. Update API documentation"
-    }
-  ]
+  "Project Workflow": {
+    "prefix": "!workflow",
+    "body": [
+      "Read and follow .vscode/skills/my-project-workflow/SKILL.md"
+    ],
+    "description": "Load project-specific workflow"
+  }
 }
 ```
 
-## Comparison Table
+## Differences from Other Platforms
 
-| Feature | Claude Code | Continue.dev | Copilot Chat |
-|---------|-------------|--------------|--------------|
-| Automatic context | ✅ | ❌ | ❌ |
-| Slash commands | ✅ | ✅ | ❌ |
-| Parallel agents | ✅ | ❌ | ❌ |
-| TodoWrite tool | ✅ | ⚠️ (update_plan) | ⚠️ (comments) |
-| Skill discovery | ✅ | ⚠️ (config) | ❌ |
-| Personal skills | ✅ | ✅ | ❌ |
-| Project skills | ✅ | ✅ | ⚠️ (snippets) |
-| Cost | Subscription | Your API | Subscription |
+### What's Missing
 
-✅ = Full support | ⚠️ = Partial/workaround | ❌ = Not available
+Compared to Claude Code:
+
+1. **No automatic context injection** - Must manually load with `!superpowers` each session
+2. **No native slash commands** - Uses VS Code snippets instead
+3. **No parallel agents** - Must use sequential execution
+4. **Snippet-based approach** - Less elegant than native commands
+5. **Session-based context** - Lost when starting new chat
+
+### What Works
+
+1. **All skill content** - Full skill library accessible
+2. **All workflows** - TDD, brainstorming, planning all functional
+3. **Personal skills** - Create your own in `~/.vscode/superpowers-personal/`
+4. **Project skills** - Project-specific workflows supported
+5. **Tool mapping** - All tools have Copilot equivalents
+
+## Tips & Best Practices
+
+### 1. Load Framework First
+
+Always start Copilot Chat sessions with:
+```
+!superpowers [Tab] [Enter]
+```
+
+This establishes the Superpowers context.
+
+### 2. One Skill at a Time
+
+Load skills as needed:
+```
+!brainstorm    # For design
+!plan          # For planning
+!tdd           # For implementation
+```
+
+### 3. Use Project Snippets
+
+Add `.vscode/superpowers.code-snippets` to your projects for team-wide consistency.
+
+### 4. Create Shortcuts
+
+Customize snippets for frequently-used workflows:
+```json
+{
+  "Quick Start": {
+    "prefix": "!start",
+    "body": [
+      "Read ~/.vscode/superpowers/skills/using-superpowers/SKILL.md",
+      "Read ~/.vscode/superpowers/skills/brainstorming/SKILL.md",
+      "Let's brainstorm this feature"
+    ]
+  }
+}
+```
+
+### 5. New Session = Reload
+
+When starting a new Copilot Chat:
+- Framework context is lost
+- Reload with `!superpowers`
+- Then load specific skills
+
+## Known Limitations
+
+### Sequential Only
+
+Skills that use parallel agents need adaptation:
+
+```
+Instead of: Launch 3 agents in parallel
+Do: Task 1 → Task 2 → Task 3 sequentially
+```
+
+### Manual Loading
+
+Unlike Claude Code's automatic skill discovery:
+1. Must explicitly load framework each session
+2. Snippet-based approach more manual
+3. No automatic context injection
+
+### Snippet Scope
+
+Snippets only work in Copilot Chat input, not in code files. This is by design.
+
+## Troubleshooting
+
+### Snippets Not Expanding
+
+1. **Check snippet location:**
+   - Mac: `~/Library/Application Support/Code/User/snippets/`
+   - Windows: `%APPDATA%\Code\User\snippets\`
+   - Linux: `~/.config/Code/User/snippets/`
+
+2. **Restart VS Code:**
+   - Ctrl+Shift+P → "Reload Window"
+
+3. **Use in Chat:**
+   - Snippets work in Copilot Chat input only
+   - Press Tab after typing prefix
+
+### Skills Not Loading
+
+1. **Verify repository:**
+   ```bash
+   ls ~/.vscode/superpowers/skills/
+   ```
+
+2. **Check paths:**
+   - Snippets use `~/.vscode/superpowers/`
+   - Should work on all platforms via Copilot
+
+3. **Update repository:**
+   ```bash
+   cd ~/.vscode/superpowers && git pull
+   ```
+
+### Context Lost
+
+**Expected behavior:**
+- Copilot Chat context is session-based
+- Starting new chat loses framework context
+- Reload with `!superpowers` at start of each session
+
+This is a platform limitation, not a bug.
 
 ## Updating
 
@@ -243,116 +346,47 @@ git pull
 
 Restart VS Code to pick up changes.
 
-## Tips & Best Practices
+## Comparison to Other Platforms
 
-### 1. Load Framework First
+| Feature | Claude Code | OpenCode | VS Code (Copilot) |
+|---------|-------------|----------|-------------------|
+| Setup Time | 2 min | 5 min | 5-10 min |
+| Auto Context | ✅ | ✅ | ❌ |
+| Slash Commands | ✅ | ✅ | ❌ (snippets) |
+| Parallel Agents | ✅ | ⚠️ | ❌ |
+| Personal Skills | ✅ | ✅ | ✅ |
+| Project Skills | ✅ | ✅ | ✅ |
+| Ease of Use | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
 
-Always start with `/superpowers` to establish context:
-```
-/superpowers
-```
+**Best overall experience:** Claude Code (native plugin, all features)
 
-### 2. One Skill at a Time
+**Best for VS Code users:** This integration (works with existing setup)
 
-Load skills as needed rather than all at once:
-```
-/brainstorm    # For design
-/plan          # For planning
-/tdd           # For implementation
-```
-
-### 3. Use Project Config
-
-Set up `.continue/config.json` in your project for team-wide consistency.
-
-### 4. Create Aliases
-
-Add short aliases for frequently used skills:
-```json
-{
-  "slashCommands": [
-    {
-      "name": "b",
-      "description": "Brainstorm (short)",
-      "prompt": "Read {{{ ~/.vscode/superpowers/skills/brainstorming/SKILL.md }}}"
-    }
-  ]
-}
-```
-
-### 5. Combine with Continue Features
-
-Use Continue's context providers alongside Superpowers:
-```json
-{
-  "contextProviders": [
-    {
-      "name": "diff"
-    },
-    {
-      "name": "terminal"
-    },
-    {
-      "name": "superpowers",
-      "params": {
-        "type": "file",
-        "path": "~/.vscode/superpowers/skills/using-superpowers/SKILL.md"
-      }
-    }
-  ]
-}
-```
-
-## Known Limitations
-
-### Sequential Only
-
-Skills that reference parallel agents (like `dispatching-parallel-agents`) need adaptation. Break into sequential steps:
-
-```
-Instead of: Launch 3 agents in parallel
-Do: Task 1 → Task 2 → Task 3 sequentially
-```
-
-### Manual Loading
-
-Unlike Claude Code's automatic skill discovery, you must explicitly load skills each chat session. Consider:
-
-1. Start each session with `/superpowers`
-2. Create a "startup" command in your config
-3. Use project-specific config to auto-remind
-
-### File Path Dependencies
-
-Skills loaded via file reading means:
-- File paths must be correct for your OS
-- Skills must be kept in sync (use `git pull`)
-- No dynamic skill generation
+See [platform comparison](platform-comparison.md) for detailed analysis.
 
 ## Getting Help
 
-- **Installation issues**: See [.vscode/INSTALL.md](../.vscode/INSTALL.md)
-- **Continue.dev help**: https://docs.continue.dev
-- **Report bugs**: https://github.com/obra/superpowers/issues
-- **Main docs**: https://github.com/obra/superpowers
+- **Installation issues:** See [.vscode/INSTALL.md](../.vscode/INSTALL.md)
+- **GitHub Copilot help:** https://docs.github.com/copilot
+- **Report bugs:** https://github.com/obra/superpowers/issues
+- **Main docs:** https://github.com/obra/superpowers
 
 ## Alternative Platforms
 
-For the best Superpowers experience:
+For better Superpowers experience:
 
-1. **[Claude Code](https://claude.ai/code)** - Native plugin support, automatic context, all features ✅
+1. **[Claude Code](https://claude.ai/code)** - Native plugin, automatic context, all features ✅
 2. **[OpenCode.ai](https://opencode.ai)** - Plugin system, native skills ✅
-3. **[Codex](https://openai.com/codex)** - CLI-based, good integration ⚠️
-4. **VS Code** - Works but requires manual setup ⚠️
+3. **VS Code with Copilot** - Works but requires manual setup ⚠️
 
 ## Contributing
 
 Help improve VS Code integration:
 
 1. Test on different platforms (Windows, Mac, Linux)
-2. Try different Continue configurations
+2. Try different workflows
 3. Report what works and what doesn't
-4. Share your Continue config files
-5. Document workarounds for limitations
+4. Share your snippet configurations
+5. Document workarounds
 
-Submit improvements via [GitHub issues](https://github.com/obra/superpowers/issues).
+Submit feedback via [GitHub issues](https://github.com/obra/superpowers/issues).

@@ -1,15 +1,15 @@
 # VS Code Integration Testing Guide
 
-This document describes how to test and verify the VS Code Superpowers integration.
+This document describes how to test and verify the VS Code Superpowers integration with GitHub Copilot Chat.
 
 ## Test Environment Setup
 
 ### Prerequisites
 
 - VS Code installed
-- Continue.dev extension OR GitHub Copilot Chat
+- GitHub Copilot Chat extension
 - Git installed
-- Internet connection for cloning repository
+- Active GitHub Copilot subscription
 
 ### Test Platforms
 
@@ -20,71 +20,47 @@ Test on multiple platforms if possible:
 
 ## Installation Testing
 
-### Test 1: Continue.dev Installation
+### Test 1: GitHub Copilot Installation
 
 **Steps:**
-1. Install Continue extension: `code --install-extension Continue.continue`
+1. Install Copilot extensions: `code --install-extension GitHub.copilot-chat`
 2. Clone Superpowers: `git clone https://github.com/obra/superpowers.git ~/.vscode/superpowers`
-3. Copy example config: `cp ~/.vscode/superpowers/.vscode/continue-config.example.json ~/.continue/config.json`
-4. Add your API key to `~/.continue/config.json`
-5. Restart VS Code
-6. Open Continue sidebar (Ctrl+Shift+L / Cmd+Shift+L)
+3. Copy snippets to global location (see platform-specific paths in QUICKSTART.md)
+4. Restart VS Code
+5. Open Copilot Chat (Ctrl+Shift+I / Cmd+Shift+I)
 
 **Expected Result:**
-- Continue sidebar opens
-- Slash commands are available (type `/` to see them)
-- `/superpowers` command appears in the list
-
-**Pass Criteria:**
-- [ ] Continue extension installs without errors
-- [ ] Repository clones successfully
-- [ ] Config file is valid JSON
-- [ ] Continue sidebar opens
-- [ ] Slash commands are visible
-
-### Test 2: GitHub Copilot Installation
-
-**Steps:**
-1. Install Copilot: `code --install-extension GitHub.copilot-chat`
-2. Clone Superpowers: `git clone https://github.com/obra/superpowers.git ~/.vscode/superpowers`
-3. Create project: `mkdir test-project && cd test-project`
-4. Copy snippets: `mkdir -p .vscode && cp ~/.vscode/superpowers/.vscode/superpowers.code-snippets .vscode/`
-5. Open project in VS Code
-6. Open Copilot Chat (Ctrl+Shift+I / Cmd+Shift+I)
-
-**Expected Result:**
+- Extensions install without errors
+- Repository clones successfully
+- Snippets file copied to correct location
 - Copilot Chat opens
-- Typing `!superpowers` and pressing Tab expands snippet
 
 **Pass Criteria:**
-- [ ] Copilot extensions install without errors
-- [ ] Repository clones successfully
-- [ ] Snippets file copied
-- [ ] Copilot Chat opens
-- [ ] Snippets expand correctly
+- [ ] Copilot extensions install successfully
+- [ ] Repository clones without errors
+- [ ] Snippets file exists in correct location
+- [ ] Copilot Chat is accessible
+
+### Test 2: Snippet Expansion
+
+**Steps:**
+1. Open Copilot Chat
+2. Type: `!superpowers`
+3. Press Tab
+
+**Expected Result:**
+- Snippet expands with full framework loading text
+- Multiple lines of instruction appear
+- Text includes tool mapping and available skills
+
+**Pass Criteria:**
+- [ ] Snippet expands on Tab press
+- [ ] Full content is visible
+- [ ] No JSON errors or malformed text
 
 ## Functional Testing
 
-### Test 3: Load Framework (Continue)
-
-**Steps:**
-1. Open Continue sidebar
-2. Type: `/superpowers`
-3. Press Enter
-
-**Expected Result:**
-- Agent loads the using-superpowers skill
-- Agent acknowledges having superpowers
-- Agent mentions tool mappings
-- Agent lists available skills or indicates readiness
-
-**Pass Criteria:**
-- [ ] Command executes without errors
-- [ ] Agent confirms framework loaded
-- [ ] Agent doesn't try to reload the skill
-- [ ] Response time < 10 seconds
-
-### Test 4: Load Framework (Copilot)
+### Test 3: Load Framework
 
 **Steps:**
 1. Open Copilot Chat
@@ -92,119 +68,153 @@ Test on multiple platforms if possible:
 3. Press Enter to send
 
 **Expected Result:**
-- Snippet expands with full framework loading instructions
-- Agent acknowledges loading framework
-- Agent mentions tool mappings
+- Copilot processes the message
+- Copilot acknowledges loading framework
+- Copilot mentions having superpowers
+- Copilot references tool mappings
 
 **Pass Criteria:**
-- [ ] Snippet expands correctly
-- [ ] Agent confirms framework loaded
-- [ ] Response makes sense
+- [ ] Message sends successfully
+- [ ] Copilot confirms framework loaded
 - [ ] Response time < 10 seconds
+- [ ] No errors in response
 
-### Test 5: Load Specific Skill (Continue)
-
-**Steps:**
-1. In Continue, type: `/skill brainstorming`
-2. Observe response
-3. Try: `/brainstorm` (shortcut)
-
-**Expected Result:**
-- Agent loads brainstorming skill
-- Agent starts asking design questions or confirms ready to brainstorm
-
-**Pass Criteria:**
-- [ ] Both commands work
-- [ ] Skill content is loaded
-- [ ] Agent behavior changes to match skill
-- [ ] No file read errors
-
-### Test 6: Load Specific Skill (Copilot)
+### Test 4: Load Specific Skill
 
 **Steps:**
 1. In Copilot Chat, type: `!brainstorm` and press Tab
-2. Press Enter
+2. Press Enter to send
+3. Observe response
 
 **Expected Result:**
-- Snippet expands
-- Agent loads brainstorming skill
-- Agent starts design discussion
+- Snippet expands with brainstorming skill path
+- Copilot loads brainstorming skill
+- Copilot starts asking design questions or confirms ready to brainstorm
 
 **Pass Criteria:**
 - [ ] Snippet expands correctly
-- [ ] Agent loads skill
-- [ ] Agent behavior appropriate for skill
+- [ ] Skill loads without errors
+- [ ] Copilot behavior matches skill (Socratic questioning)
+- [ ] No file not found errors
 
-### Test 7: Brainstorming Workflow
+### Test 5: Multiple Skills in Sequence
 
 **Steps:**
-1. Load framework: `/superpowers` (Continue) or `!superpowers` (Copilot)
-2. Load brainstorming: `/brainstorm` (Continue) or `!brainstorm` (Copilot)
-3. Say: "I want to build a REST API for a todo app"
-4. Answer the agent's questions
+1. Load framework: `!superpowers` [Tab] [Enter]
+2. Load brainstorming: `!brainstorm` [Tab] [Enter]
+3. After design discussion, load planning: `!plan` [Tab] [Enter]
 
 **Expected Result:**
-- Agent asks clarifying questions
-- Agent explores design alternatives
-- Agent doesn't jump straight to implementation
-- Agent presents design in digestible chunks
+- Each skill loads successfully
+- Copilot transitions between skills appropriately
+- Context from previous skill is retained
 
 **Pass Criteria:**
-- [ ] Agent asks 3+ clarifying questions
-- [ ] Agent explores alternatives
-- [ ] Agent doesn't write code immediately
-- [ ] Workflow feels like Socratic dialogue
+- [ ] All skills load without errors
+- [ ] Transitions are smooth
+- [ ] Conversation context maintained
 
-### Test 8: Planning Workflow
+### Test 6: Brainstorming Workflow
+
+**Steps:**
+1. Load framework: `!superpowers` [Tab] [Enter]
+2. Load brainstorming: `!brainstorm` [Tab] [Enter]
+3. Say: "I want to build a REST API for a todo app"
+4. Answer Copilot's questions
+
+**Expected Result:**
+- Copilot asks clarifying questions
+- Copilot explores design alternatives
+- Copilot doesn't jump to implementation
+- Socratic dialogue approach
+
+**Pass Criteria:**
+- [ ] Copilot asks 3+ clarifying questions
+- [ ] Design exploration before coding
+- [ ] No premature code generation
+- [ ] Workflow feels like design refinement
+
+### Test 7: Planning Workflow
 
 **Steps:**
 1. Load framework
-2. Load planning: `/plan` (Continue) or `!plan` (Copilot)
-3. Describe a simple feature: "Add a user registration endpoint"
+2. Load planning: `!plan` [Tab] [Enter]
+3. Describe feature: "Add user registration endpoint"
 
 **Expected Result:**
-- Agent creates implementation plan
-- Plan has bite-sized tasks
-- Each task includes file paths and verification steps
+- Copilot creates implementation plan
+- Plan has small, bite-sized tasks
+- Each task includes file paths and verification
 
 **Pass Criteria:**
-- [ ] Plan is created
-- [ ] Tasks are small (2-5 minutes each)
-- [ ] File paths are specified
+- [ ] Plan is generated
+- [ ] Tasks are appropriately sized
+- [ ] File paths specified
 - [ ] Verification steps included
 
-### Test 9: TDD Workflow
+### Test 8: TDD Workflow
 
 **Steps:**
 1. Load framework
-2. Load TDD: `/tdd` (Continue) or `!tdd` (Copilot)
-3. Ask to implement a simple function: "Create a function to validate email addresses"
+2. Load TDD: `!tdd` [Tab] [Enter]
+3. Ask to implement: "Create email validation function"
 
 **Expected Result:**
-- Agent writes test first
-- Agent explains why test should fail
-- Agent writes minimal implementation
-- Agent verifies test passes
+- Copilot writes test first
+- Copilot explains RED-GREEN-REFACTOR
+- Implementation is minimal
+- Copilot verifies test passes
 
 **Pass Criteria:**
-- [ ] Test written before implementation
-- [ ] Agent mentions RED-GREEN-REFACTOR
-- [ ] Implementation is minimal
-- [ ] Agent verifies test passes
+- [ ] Test before implementation
+- [ ] TDD methodology mentioned
+- [ ] Minimal implementation
+- [ ] Test verification included
 
-### Test 10: Path Resolution (Cross-Platform)
+### Test 9: List Skills
 
 **Steps:**
-1. Check config file paths
-2. Try loading framework
-3. Check for "file not found" errors
+1. Load framework
+2. Use: `!skills` [Tab] [Enter]
 
-**Platform-Specific:**
-- macOS/Linux: `~/.vscode/superpowers/...`
-- Windows: `C:/Users/.../` or `%USERPROFILE%\.vscode\...`
+**Expected Result:**
+- Copilot lists all available skills
+- Skills are organized by category
+- Each skill has description
 
 **Pass Criteria:**
-- [ ] Paths resolve correctly on each platform
+- [ ] Skills list appears
+- [ ] All major skills included
+- [ ] Categorized/organized
+- [ ] Descriptions provided
+
+## Path Resolution Testing (Cross-Platform)
+
+### Test 10: Path Resolution
+
+**Platform-Specific Steps:**
+
+**macOS/Linux:**
+```bash
+# Verify repository location
+ls ~/.vscode/superpowers/skills/
+
+# Test snippet expansion
+# Should reference ~/.vscode/superpowers/skills/...
+```
+
+**Windows:**
+```powershell
+# Verify repository location
+Get-ChildItem $env:USERPROFILE\.vscode\superpowers\skills\
+
+# Test snippet expansion
+# Should reference ~/.vscode/superpowers/skills/... (usually works via Copilot)
+```
+
+**Pass Criteria:**
+- [ ] Repository exists at expected location
+- [ ] Snippets reference correct paths
 - [ ] No file not found errors
 - [ ] Skills load successfully
 
@@ -213,182 +223,164 @@ Test on multiple platforms if possible:
 ### Test 11: Invalid Skill Name
 
 **Steps:**
-1. Try: `/skill nonexistent-skill` (Continue)
-2. Or manually type: "Read ~/.vscode/superpowers/skills/nonexistent-skill/SKILL.md"
+1. Manually type in Copilot Chat: "Read ~/.vscode/superpowers/skills/nonexistent-skill/SKILL.md"
+2. Send message
 
 **Expected Result:**
-- Agent reports file not found or skill doesn't exist
-- Agent suggests checking available skills
+- Copilot reports file doesn't exist
+- Graceful error handling
+- Suggestion to check available skills
 
 **Pass Criteria:**
-- [ ] Error is caught gracefully
-- [ ] Agent doesn't crash
+- [ ] Error caught gracefully
+- [ ] No Copilot crash
 - [ ] Helpful error message
 
-### Test 12: Missing Configuration
+### Test 12: Missing Repository
 
 **Steps:**
-1. Remove API key from Continue config
-2. Try to use `/superpowers`
+1. Temporarily rename repository: `mv ~/.vscode/superpowers ~/.vscode/superpowers-backup`
+2. Try using a snippet: `!superpowers` [Tab] [Enter]
+3. Restore: `mv ~/.vscode/superpowers-backup ~/.vscode/superpowers`
 
 **Expected Result:**
-- Error about missing API key
-- Clear indication of what's wrong
+- Copilot reports file not found
+- Clear error message
+- Can recover after restoring repository
 
 **Pass Criteria:**
-- [ ] Error is clear
-- [ ] No silent failures
-- [ ] Agent doesn't crash
+- [ ] Error is reported
+- [ ] Error message is clear
+- [ ] No silent failure
 
-### Test 13: Malformed Config
+### Test 13: Malformed Snippet File
 
 **Steps:**
-1. Add a syntax error to Continue config (e.g., trailing comma)
-2. Restart VS Code
-3. Open Continue
+1. Backup snippets file
+2. Add syntax error to snippets JSON (e.g., trailing comma)
+3. Restart VS Code
+4. Try to use snippets
 
 **Expected Result:**
-- Continue reports JSON parsing error
-- Extension doesn't load silently
+- VS Code may report JSON error on load
+- Snippets don't expand
+- Can recover by fixing JSON
 
 **Pass Criteria:**
-- [ ] Error is visible
-- [ ] Error message mentions JSON
-- [ ] Can recover by fixing config
+- [ ] Error is detected
+- [ ] Clear indication of problem
+- [ ] Recoverable by fixing syntax
 
 ## Integration Testing
 
-### Test 14: Continue Context Providers
+### Test 14: Context Retention
 
 **Steps:**
-1. Open a file with Continue
-2. Pin the file (Continue's pin feature)
-3. Use `/superpowers` and ask a question about the file
+1. Start Copilot Chat
+2. Load framework: `!superpowers` [Tab] [Enter]
+3. Discuss a topic with Copilot
+4. Load a skill: `!brainstorm` [Tab] [Enter]
+5. Check if previous context is maintained
 
 **Expected Result:**
-- Agent has access to both Superpowers skills and file context
-- Agent can answer questions about the pinned file
-- Context providers work alongside Superpowers
+- Conversation context retained
+- Skill loads on top of existing context
+- Coherent conversation flow
 
 **Pass Criteria:**
-- [ ] File context is available
-- [ ] Superpowers skills work
-- [ ] No conflicts between contexts
+- [ ] Context maintained
+- [ ] No conversation reset
+- [ ] Coherent flow
 
-### Test 15: Multiple Skills in Sequence
+### Test 15: Session Persistence
 
 **Steps:**
-1. Load framework: `/superpowers`
-2. Load brainstorming: `/brainstorm`
-3. After design discussion, load planning: `/plan`
-4. After plan, load TDD: `/tdd`
+1. Load framework in Copilot Chat
+2. Close Copilot Chat panel
+3. Reopen Copilot Chat
+4. Check if framework is still loaded
 
 **Expected Result:**
-- Each skill loads successfully
-- Agent transitions between skills
-- Context from previous skill is retained
+- Framework context lost (expected behavior)
+- Must reload with `!superpowers` again
 
 **Pass Criteria:**
-- [ ] All skills load
-- [ ] No confusion between skills
-- [ ] Conversation context maintained
+- [ ] Behavior is documented
+- [ ] Users know to reload each session
+- [ ] Clear in documentation
 
 ## Performance Testing
 
 ### Test 16: Response Time
 
 **Steps:**
-1. Load framework
-2. Measure time to first response
-3. Load a skill
-4. Measure time to skill loading
+1. Measure time for snippet expansion (should be instant)
+2. Measure time for Copilot to process framework load (< 10s)
+3. Measure time for skill loading (< 5s)
 
 **Expected Result:**
-- Framework loads < 10 seconds
-- Skills load < 5 seconds
-- Responses are timely
+- Snippet expansion: instant
+- Framework load: < 10 seconds
+- Skill load: < 5 seconds
 
 **Pass Criteria:**
+- [ ] Snippet expansion instant
 - [ ] Framework load < 10s
 - [ ] Skill load < 5s
-- [ ] Interactive response time acceptable
+- [ ] Acceptable user experience
 
 ### Test 17: Large Skill Files
 
 **Steps:**
-1. Load a complex skill (e.g., `test-driven-development`)
-2. Check if full content is loaded
-3. Verify agent follows all instructions
+1. Load complex skill: `!tdd` [Tab] [Enter]
+2. Verify full content processed
+3. Check all instructions followed
 
 **Expected Result:**
-- Entire skill content is processed
-- Agent doesn't truncate instructions
-- All checklists and steps are followed
+- Entire skill loaded
+- No truncation
+- All checklists and steps available
 
 **Pass Criteria:**
-- [ ] Full skill loaded
+- [ ] Full skill content processed
 - [ ] No truncation
-- [ ] Complete instructions followed
+- [ ] Complete instructions available
 
 ## Documentation Testing
 
 ### Test 18: Installation Docs Accuracy
 
 **Steps:**
-1. Follow `.vscode/INSTALL.md` step by step
+1. Follow `INSTALL.md` step by step on clean system
 2. Note any unclear instructions
 3. Note any errors or omissions
 
 **Pass Criteria:**
-- [ ] All steps are clear
+- [ ] All steps clear and accurate
 - [ ] All commands work
 - [ ] No missing information
-- [ ] Screenshots/examples accurate
+- [ ] Platform-specific instructions correct
 
-### Test 19: Quick Start Docs
+### Test 19: Quick Start Accuracy
 
 **Steps:**
-1. Follow `.vscode/QUICKSTART.md` as a new user
-2. Time how long it takes
+1. Follow `QUICKSTART.md` as new user
+2. Time the setup process
 3. Note any confusion
 
 **Expected Result:**
 - Setup complete in < 10 minutes
 - All examples work
-- No major confusion
+- Clear for beginners
 
 **Pass Criteria:**
 - [ ] Setup time < 10 minutes
-- [ ] All examples work
-- [ ] Clear for beginners
-
-### Test 20: README.vscode.md Completeness
-
-**Steps:**
-1. Read `docs/README.vscode.md`
-2. Check all links work
-3. Verify examples are correct
-
-**Pass Criteria:**
-- [ ] All links valid
-- [ ] Examples work
-- [ ] Information is complete
-- [ ] Tool mapping is accurate
+- [ ] All examples functional
+- [ ] Beginner-friendly
 
 ## Compatibility Testing
 
-### Test 21: Continue.dev Version Compatibility
-
-**Test with:**
-- Latest stable Continue version
-- Previous major version (if available)
-
-**Pass Criteria:**
-- [ ] Works with latest version
-- [ ] Config format compatible
-- [ ] Slash commands work
-
-### Test 22: VS Code Version Compatibility
+### Test 20: VS Code Version Compatibility
 
 **Test with:**
 - Latest stable VS Code
@@ -396,8 +388,19 @@ Test on multiple platforms if possible:
 
 **Pass Criteria:**
 - [ ] Works on latest stable
-- [ ] No deprecated API usage
-- [ ] Extensions install
+- [ ] Snippets function correctly
+- [ ] No deprecated features
+
+### Test 21: Copilot Extension Version
+
+**Test with:**
+- Latest Copilot Chat extension
+- Note version number
+
+**Pass Criteria:**
+- [ ] Works with current version
+- [ ] No compatibility issues
+- [ ] Document tested version
 
 ## Reporting Test Results
 
@@ -407,29 +410,29 @@ For each test:
 - [ ] Test blocked - describe blocker
 - [ ] Test not applicable - explain why
 
-Document any issues found:
+Document any issues:
 1. Test number and name
-2. Platform (OS, VS Code version, extension version)
+2. Platform (OS, VS Code version, Copilot version)
 3. Steps to reproduce
 4. Expected vs actual result
 5. Error messages (if any)
-6. Screenshots (if applicable)
+6. Screenshots (if helpful)
 
 ## Success Criteria
 
-The VS Code integration is considered successful if:
+The VS Code integration is successful if:
 - [ ] 90%+ of tests pass on all platforms
-- [ ] All critical workflows function (brainstorming, planning, TDD)
-- [ ] Documentation is clear and complete
-- [ ] Installation process is straightforward
-- [ ] No critical bugs remain
+- [ ] Core workflows function (brainstorming, planning, TDD)
+- [ ] Documentation is clear and accurate
+- [ ] Installation is straightforward
+- [ ] No critical bugs
 
-## Known Limitations
+## Known Limitations (Expected Behavior)
 
-Document these as expected behavior, not bugs:
-- Manual skill loading required each session (vs Claude Code auto-inject)
+These are not bugs, but documented limitations:
+- Manual skill loading each session (no auto-inject like Claude Code)
+- Snippet-based approach (no native slash commands)
 - No parallel agent support
-- File reading overhead
-- No native TodoWrite tool
+- Session-based context (lost when chat restarted)
 
-These are platform limitations, not bugs to fix.
+These limitations are inherent to the GitHub Copilot Chat platform and are documented in user guides.

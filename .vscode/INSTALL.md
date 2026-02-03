@@ -1,259 +1,146 @@
-# Installing Superpowers for VS Code
+# Installing Superpowers for VS Code with GitHub Copilot Chat
 
-VS Code doesn't have a built-in plugin system for AI coding agents, but you can use Superpowers with popular AI assistant extensions like **Continue.dev** or **GitHub Copilot**.
+VS Code doesn't have a built-in plugin system for AI coding agents, but you can use Superpowers with **GitHub Copilot Chat** through VS Code code snippets.
 
 ## Prerequisites
 
 - [Visual Studio Code](https://code.visualstudio.com) installed
-- One of these AI assistant extensions:
-  - [Continue](https://marketplace.visualstudio.com/items?itemName=Continue.continue) (recommended - open source, customizable)
-  - [GitHub Copilot](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot) with Chat enabled
+- [GitHub Copilot](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot) subscription
+- [GitHub Copilot Chat](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot-chat) extension installed
+- Git installed
 
-## Option 1: Continue.dev Integration (Recommended)
+## Installation Steps
 
-Continue.dev supports custom context providers and instructions, making it ideal for Superpowers integration.
+### Step 1: Install GitHub Copilot Extensions
 
-### Installation Steps
+Install both Copilot extensions from VS Code marketplace:
 
-#### 1. Install Continue Extension
-
-Install from VS Code marketplace or via command line:
-```bash
-code --install-extension Continue.continue
-```
-
-#### 2. Clone Superpowers
-
-Clone to your home directory or preferred location:
-
-```bash
-# macOS / Linux
-git clone https://github.com/obra/superpowers.git ~/.vscode/superpowers
-
-# Windows (PowerShell)
-git clone https://github.com/obra/superpowers.git "$env:USERPROFILE\.vscode\superpowers"
-
-# Windows (Command Prompt)
-git clone https://github.com/obra/superpowers.git "%USERPROFILE%\.vscode\superpowers"
-```
-
-#### 3. Configure Continue
-
-Create or edit Continue's configuration file:
-
-**Location:**
-- macOS / Linux: `~/.continue/config.json`
-- Windows: `%USERPROFILE%\.continue\config.json`
-
-**Add Superpowers context provider:**
-
-```json
-{
-  "models": [
-    {
-      "title": "Claude 3.5 Sonnet",
-      "provider": "anthropic",
-      "model": "claude-3-5-sonnet-20241022",
-      "apiKey": "YOUR_API_KEY"
-    }
-  ],
-  "customCommands": [
-    {
-      "name": "superpowers",
-      "description": "Load Superpowers skills framework",
-      "prompt": "Read the file {{{ ~/.vscode/superpowers/skills/using-superpowers/SKILL.md }}} and follow its instructions. This is the Superpowers framework for AI coding agents.\n\n**IMPORTANT:** You are now following the using-superpowers skill. It is ALREADY LOADED - do NOT try to load it again.\n\n**Tool Mapping for VS Code/Continue:**\n- `Skill` tool → Use Continue's custom commands to load skills from ~/.vscode/superpowers/skills/\n- `TodoWrite` → Use Continue's `update_plan` or create TODO comments\n- `Task` with subagents → Break into sequential steps (Continue doesn't support parallel agents)\n- File operations → Use Continue's native file operations\n\n**Skills location:**\nAll skills are in `~/.vscode/superpowers/skills/` - reference them by reading the SKILL.md file in each skill directory."
-    }
-  ],
-  "slashCommands": [
-    {
-      "name": "skill",
-      "description": "Load a Superpowers skill",
-      "prompt": "Read and follow the instructions in ~/.vscode/superpowers/skills/{{{input}}}/SKILL.md"
-    },
-    {
-      "name": "brainstorm",
-      "description": "Interactive design refinement",
-      "prompt": "Read and follow ~/.vscode/superpowers/skills/brainstorming/SKILL.md"
-    },
-    {
-      "name": "plan",
-      "description": "Create implementation plan",
-      "prompt": "Read and follow ~/.vscode/superpowers/skills/writing-plans/SKILL.md"
-    },
-    {
-      "name": "tdd",
-      "description": "Test-driven development workflow",
-      "prompt": "Read and follow ~/.vscode/superpowers/skills/test-driven-development/SKILL.md"
-    },
-    {
-      "name": "debug",
-      "description": "Systematic debugging process",
-      "prompt": "Read and follow ~/.vscode/superpowers/skills/systematic-debugging/SKILL.md"
-    }
-  ],
-  "contextProviders": [
-    {
-      "name": "superpowers",
-      "params": {
-        "type": "file",
-        "path": "~/.vscode/superpowers/skills/using-superpowers/SKILL.md"
-      }
-    }
-  ]
-}
-```
-
-**Adjust the configuration:**
-- Replace `YOUR_API_KEY` with your Anthropic API key
-- Update file paths if you cloned to a different location
-- You can add other models (OpenAI, local models, etc.) as needed
-
-#### 4. Verify Installation
-
-1. Restart VS Code
-2. Open Continue sidebar (Ctrl+Shift+L / Cmd+Shift+L)
-3. Type `/superpowers` to load the framework
-4. Type `/skill brainstorming` to test loading a specific skill
-
-### Usage with Continue
-
-#### Loading the Framework
-
-At the start of any new chat, type:
-```
-/superpowers
-```
-
-This loads the base Superpowers framework and context.
-
-#### Loading Specific Skills
-
-Use the `/skill` command:
-```
-/skill brainstorming
-/skill writing-plans
-/skill test-driven-development
-/skill systematic-debugging
-```
-
-Or use convenient shortcuts:
-```
-/brainstorm
-/plan
-/tdd
-/debug
-```
-
-#### Project-Specific Configuration
-
-You can also add Superpowers to a specific project by creating `.continue/config.json` in your project root with the same configuration.
-
-### Personal Skills
-
-Create your own skills in `~/.vscode/superpowers-personal/`:
-
-```bash
-mkdir -p ~/.vscode/superpowers-personal/my-skill
-```
-
-Create `~/.vscode/superpowers-personal/my-skill/SKILL.md`:
-
-```markdown
----
-name: my-skill
-description: Use when [condition] - [what it does]
----
-
-# My Skill
-
-[Your skill content here]
-```
-
-Add to Continue config:
-```json
-{
-  "slashCommands": [
-    {
-      "name": "my-skill",
-      "description": "My custom skill",
-      "prompt": "Read and follow ~/.vscode/superpowers-personal/my-skill/SKILL.md"
-    }
-  ]
-}
-```
-
-## Option 2: GitHub Copilot Integration
-
-GitHub Copilot Chat can also work with Superpowers, though it requires manual context loading.
-
-### Installation Steps
-
-#### 1. Install GitHub Copilot
-
-Install both extensions from VS Code marketplace:
 ```bash
 code --install-extension GitHub.copilot
 code --install-extension GitHub.copilot-chat
 ```
 
-#### 2. Clone Superpowers
+Or install from the VS Code Extensions marketplace (Ctrl+Shift+X / Cmd+Shift+X).
 
+### Step 2: Clone Superpowers
+
+Clone the repository to your system:
+
+**macOS / Linux:**
 ```bash
-# macOS / Linux
 git clone https://github.com/obra/superpowers.git ~/.vscode/superpowers
+```
 
-# Windows (PowerShell)
+**Windows (PowerShell):**
+```powershell
 git clone https://github.com/obra/superpowers.git "$env:USERPROFILE\.vscode\superpowers"
 ```
 
-#### 3. Create Workspace Snippets (Optional)
-
-To make loading skills easier, create VS Code snippets:
-
-**File:** `.vscode/superpowers.code-snippets` (in your project)
-
-```json
-{
-  "Load Superpowers": {
-    "prefix": "!superpowers",
-    "body": [
-      "Read and follow the instructions in ~/.vscode/superpowers/skills/using-superpowers/SKILL.md",
-      "",
-      "Tool Mapping for VS Code:",
-      "- Skill tool → Ask me to read skill files from ~/.vscode/superpowers/skills/",
-      "- TodoWrite → Use TODO comments or task tracking",
-      "- Task with subagents → Break into sequential steps",
-      "- File operations → Use my native file operations"
-    ],
-    "description": "Load Superpowers framework"
-  },
-  "Load Skill": {
-    "prefix": "!skill",
-    "body": [
-      "Read and follow the instructions in ~/.vscode/superpowers/skills/${1:skill-name}/SKILL.md"
-    ],
-    "description": "Load a specific Superpowers skill"
-  }
-}
+**Windows (Command Prompt):**
+```cmd
+git clone https://github.com/obra/superpowers.git "%USERPROFILE%\.vscode\superpowers"
 ```
 
-### Usage with GitHub Copilot
+### Step 3: Set Up Code Snippets
+
+You have two options for setting up the snippets:
+
+#### Option A: Global Snippets (Recommended)
+
+Copy the snippets file to your global VS Code configuration:
+
+**macOS / Linux:**
+```bash
+mkdir -p ~/Library/Application\ Support/Code/User/snippets/
+cp ~/.vscode/superpowers/.vscode/superpowers.code-snippets ~/Library/Application\ Support/Code/User/snippets/
+```
+
+**Windows (PowerShell):**
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:APPDATA\Code\User\snippets"
+Copy-Item "$env:USERPROFILE\.vscode\superpowers\.vscode\superpowers.code-snippets" "$env:APPDATA\Code\User\snippets\"
+```
+
+**Windows (Command Prompt):**
+```cmd
+mkdir "%APPDATA%\Code\User\snippets" 2>nul
+copy "%USERPROFILE%\.vscode\superpowers\.vscode\superpowers.code-snippets" "%APPDATA%\Code\User\snippets\"
+```
+
+#### Option B: Project-Specific Snippets
+
+Copy the snippets to each project where you want to use Superpowers:
+
+```bash
+# In your project directory
+mkdir -p .vscode
+cp ~/.vscode/superpowers/.vscode/superpowers.code-snippets .vscode/
+```
+
+### Step 4: Verify Installation
+
+1. Open VS Code
+2. Open Copilot Chat (Ctrl+Shift+I / Cmd+Shift+I)
+3. In the chat input, type `!superpowers` and press Tab
+4. You should see the snippet expand with framework loading instructions
+5. Press Enter to send the message to Copilot
+
+## Usage
+
+### Loading the Framework
+
+At the start of any new Copilot Chat session:
 
 1. Open Copilot Chat (Ctrl+Shift+I / Cmd+Shift+I)
-2. Paste or use snippet to load framework:
-   ```
-   Read and follow the instructions in ~/.vscode/superpowers/skills/using-superpowers/SKILL.md
-   ```
-3. Load specific skills as needed:
-   ```
-   Read and follow ~/.vscode/superpowers/skills/brainstorming/SKILL.md
-   ```
+2. Type `!superpowers` and press Tab
+3. Press Enter to send
 
-**Note:** GitHub Copilot doesn't support custom slash commands, so you'll need to manually reference skill files each session.
+This loads the Superpowers framework and makes all skills available.
+
+### Loading Specific Skills
+
+Use the snippet shortcuts to load individual skills:
+
+| Snippet | Skill | Purpose |
+|---------|-------|---------|
+| `!superpowers` | Framework | Load core framework |
+| `!skill` | Generic | Load any skill by name |
+| `!brainstorm` | Brainstorming | Design refinement |
+| `!plan` | Writing Plans | Implementation planning |
+| `!tdd` | Test-Driven Development | TDD workflow |
+| `!debug` | Systematic Debugging | Debugging process |
+| `!review` | Code Review | Pre-review checklist |
+| `!verify` | Verification | Verify completion |
+| `!worktree` | Git Worktrees | Parallel branches |
+| `!skills` | List | Show all available skills |
+
+**Usage pattern:**
+1. Type the snippet prefix (e.g., `!brainstorm`)
+2. Press Tab to expand
+3. Press Enter to send to Copilot
+
+### Example Workflow
+
+**Creating a new feature:**
+```
+1. Open Copilot Chat
+2. Type: !superpowers [Tab] [Enter]
+   (Framework loads)
+3. Type: !brainstorm [Tab] [Enter]
+   (Start design discussion)
+4. Answer Copilot's questions
+5. Type: !plan [Tab] [Enter]
+   (Create implementation plan)
+6. Type: !tdd [Tab] [Enter]
+   (Switch to TDD mode)
+7. Implement the feature
+8. Type: !review [Tab] [Enter]
+   (Run pre-review checks)
+```
 
 ## Skill Locations
 
-Skills are organized in the `skills/` directory:
+All skills are available in the cloned repository:
 
 ```
 ~/.vscode/superpowers/skills/
@@ -275,69 +162,143 @@ Skills are organized in the `skills/` directory:
 
 ## Tool Mapping Reference
 
-When skills reference Claude Code tools, map to VS Code equivalents:
+When skills reference Claude Code tools, Copilot Chat uses these equivalents:
 
-| Claude Code Tool | VS Code / Continue Equivalent |
-|------------------|-------------------------------|
-| `Skill` | Continue slash commands or file reading |
-| `TodoWrite` | `update_plan` or TODO comments |
+| Claude Code Tool | GitHub Copilot Chat Equivalent |
+|------------------|--------------------------------|
+| `Skill` | Snippet expansion + file reading |
+| `TodoWrite` | TODO/FIXME comments in code |
 | `Task` with subagents | Sequential steps (no parallel support) |
-| `Read`, `Write`, `Edit` | Native Continue file operations |
-| `Bash` | VS Code terminal integration |
+| `Read`, `Write`, `Edit` | Native Copilot file operations |
+| `Bash` | VS Code integrated terminal |
 
 ## Updating
+
+Pull the latest changes from the repository:
 
 ```bash
 cd ~/.vscode/superpowers
 git pull
 ```
 
-Restart VS Code to load updates.
+After updating, restart VS Code or reload the window (Ctrl+Shift+P / Cmd+Shift+P → "Reload Window").
 
 ## Troubleshooting
 
+### Snippets not expanding
+
+1. **Check snippet file location:**
+   - Global: `~/Library/Application Support/Code/User/snippets/` (Mac) or `%APPDATA%\Code\User\snippets\` (Windows)
+   - Project: `.vscode/superpowers.code-snippets` in your project
+
+2. **Verify snippet syntax:**
+   - Open the snippets file and ensure it's valid JSON
+   - No trailing commas, proper formatting
+
+3. **Try different scope:**
+   - Snippets work in Copilot Chat input
+   - Press Tab after typing the prefix
+   - Make sure you're in the chat input, not the editor
+
 ### Skills not loading
 
-1. Verify clone location: `ls ~/.vscode/superpowers/skills`
-2. Check file paths in your Continue config match your installation
-3. On Windows, use backslashes or forward slashes consistently
-4. Restart VS Code after configuration changes
+1. **Verify repository clone:**
+   ```bash
+   ls ~/.vscode/superpowers/skills/
+   ```
+   Should show all skill directories
 
-### Continue custom commands not working
+2. **Check file paths in snippets:**
+   - On Windows, paths may need adjustment
+   - Use forward slashes: `C:/Users/...` or escape backslashes: `C:\\Users\\...`
 
-1. Check Continue config syntax: `~/.continue/config.json`
-2. Ensure JSON is valid (no trailing commas)
-3. Check Continue extension logs: View → Output → Continue
+3. **Restart VS Code:**
+   - Sometimes needed after adding snippets
+   - Ctrl+Shift+P / Cmd+Shift+P → "Reload Window"
+
+### Copilot doesn't follow skill instructions
+
+1. **Framework must be loaded first:**
+   - Use `!superpowers` at the start of each chat session
+   - This establishes context
+
+2. **Skills reference outdated:**
+   - Always use current file content
+   - Run `git pull` to update
+
+3. **Clear and restart:**
+   - Start a new Copilot Chat session
+   - Load framework fresh with `!superpowers`
 
 ### File path issues on Windows
 
-If using Windows, you may need to adjust paths in the config:
-- Use forward slashes: `C:/Users/YourName/.vscode/superpowers/...`
-- Or escape backslashes: `C:\\Users\\YourName\\.vscode\\superpowers\\...`
-- Or use PowerShell-style variables: `$env:USERPROFILE\.vscode\superpowers\...`
+If using Windows, you may need to adjust paths:
 
-### Skills reference outdated
+- **Use forward slashes:** `C:/Users/YourName/.vscode/superpowers/...`
+- **Or escape backslashes:** `C:\\Users\\YourName\\.vscode\\superpowers\\...`
+- **Or use variables:** `%USERPROFILE%\.vscode\superpowers\...` (may not work in all contexts)
 
-Skills evolve. Always load the current version from files, don't rely on memory.
+The snippets use `~/.vscode/superpowers/` which typically works on all platforms when Copilot reads the files.
+
+## Creating Personal Skills
+
+You can create your own skills in a separate directory:
+
+```bash
+mkdir -p ~/.vscode/superpowers-personal/my-skill
+```
+
+Create `~/.vscode/superpowers-personal/my-skill/SKILL.md`:
+
+```markdown
+---
+name: my-skill
+description: Use when [condition] - [what it does]
+---
+
+# My Skill
+
+[Your skill content here]
+```
+
+Then add a snippet for it in your snippets file:
+
+```json
+{
+  "My Custom Skill": {
+    "prefix": "!myskill",
+    "body": [
+      "Read and follow ~/.vscode/superpowers-personal/my-skill/SKILL.md"
+    ],
+    "description": "Load my custom skill"
+  }
+}
+```
+
+## Known Limitations
+
+**GitHub Copilot Chat Integration Limitations:**
+
+1. **Manual loading required** - Must use snippets to load framework each session (no automatic context injection)
+2. **No slash commands** - Unlike Continue.dev, Copilot doesn't support custom slash commands
+3. **Snippet-based approach** - Less elegant than native command systems
+4. **No parallel agent support** - Skills using parallel agents must adapt to sequential execution
+5. **Session-based** - Framework context lost when starting new chat session
+
+**Despite these limitations**, Superpowers provides valuable workflows and discipline for AI-assisted development with GitHub Copilot in VS Code.
 
 ## Getting Help
 
-- Report issues: https://github.com/obra/superpowers/issues
-- Main documentation: https://github.com/obra/superpowers
-- Continue docs: https://docs.continue.dev
-- Copilot docs: https://docs.github.com/copilot
+- **Report issues:** https://github.com/obra/superpowers/issues
+- **Main documentation:** https://github.com/obra/superpowers
+- **Copilot docs:** https://docs.github.com/copilot
 
-## Limitations
+## Alternative Platforms
 
-**VS Code Integration Limitations:**
+For a better Superpowers experience with more native integration:
 
-1. **No automatic context injection** - Unlike Claude Code's native plugin system, you must manually load skills each session
-2. **No parallel agent support** - Continue and Copilot run sequentially, so skills that use parallel agents need adaptation
-3. **File reading overhead** - Skills are loaded by reading markdown files rather than native tool invocation
-4. **No native TodoWrite** - Use Continue's `update_plan` or create TODO comments instead
+1. **[Claude Code](https://claude.ai/code)** - Native plugin support, automatic context, all features ✅
+2. **[OpenCode.ai](https://opencode.ai)** - Plugin system, native skills ✅
+3. **VS Code** - Works with GitHub Copilot, but requires manual setup ⚠️
 
-**Despite these limitations**, Superpowers provides valuable workflows and discipline for AI-assisted development in VS Code.
-
-## Alternative: Use Claude Code
-
-For the best Superpowers experience, consider using [Claude Code](https://claude.ai/code) which has native plugin support and all features working out of the box.
+See the [platform comparison](../docs/platform-comparison.md) for more details.
