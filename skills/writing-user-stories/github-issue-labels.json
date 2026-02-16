@@ -1,0 +1,52 @@
+[
+    {
+        "color": "D4C5F9",
+        "description": "Good for newcomers",
+        "name": "🐣 good first issue"
+    },
+    {
+        "color": "C5DEF5",
+        "description": "New feature or request",
+        "name": "🐼 enhancement"
+    },
+    {
+        "color": "1D76DB",
+        "description": "Improvements or additions to documentation",
+        "name": "📓 documentation"
+    },
+    {
+        "color": "0E8A16",
+        "description": "Extra attention is needed",
+        "name": "🦥 help wanted"
+    },
+    {
+        "color": "d876e3",
+        "description": "Further information is requested",
+        "name": "😵‍💫 question"
+    },
+    {
+        "color": "CDF431",
+        "description": "User community",
+        "name": "🤗 community"
+    },
+    {
+        "color": "F9D0C4",
+        "description": "There is a workaround available",
+        "name": "🌦️ workaround exists"
+    },
+    {
+        "color": "F69791",
+        "description": "do in future: has dependency on external factor",
+        "name": ":rotating_light: blocked"
+    },
+    {
+        "color": "ff0f0f",
+        "description": "Long forgotten items...",
+        "name": "stale"
+    },
+    {
+        "color": "2eec61",
+        "description": "Regarding functionality or submission of community pixi environments",
+        "name": ":fairy: pixi-env"
+    }
+]
