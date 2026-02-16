@@ -110,7 +110,7 @@ When the user says stories are ready:
 4. **Compose issue body** from the story:
    - Title: story title (concise, action-oriented)
    - Body: "As a / I want / So that" + acceptance scenarios
-   - Labels: derive from story content (e.g., `enhancement`, `frontend`, `api`)
+   - Labels: select from `github-issue-labels.json` in this skill's directory — match story content to the label descriptions. Apply multiple labels when appropriate.
    - Type: from the table above
 
 5. **Post using MCP GitHub tools** (activate issue/comment management tools first)
