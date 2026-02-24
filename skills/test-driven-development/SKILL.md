@@ -381,6 +381,12 @@ When adding mocks or test utilities, read @testing-anti-patterns.md and testing-
 - Adding test-only methods to production classes
 - Mocking without understanding dependencies
 
+## Python Best Practices
+
+When writing Python code, read @python-best-practices.md for coding standards:
+- Always use type annotations on function arguments and return types
+- Use modern typing syntax (`list[T]`, `X | None`)
+
 ## Pytest Best Practices
 
 When using pytest, read @pytest-best-practices.md for project structure and test organization:
