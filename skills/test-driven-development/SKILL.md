@@ -179,16 +179,44 @@ Confirm:
 
 ### REFACTOR - Clean Up
 
-After green only:
-- Remove duplication
-- Improve names
-- Extract helpers
+**Refactoring = changing code structure without changing behavior.**
 
-Keep tests green. Don't add behavior.
+Valid refactoring:
+- Remove duplication (DRY: Don't Repeat Yourself)
+- Improve names for clarity
+- Extract helpers/functions
+- Simplify complex conditionals
+- Reorganize for readability
+
+Not refactoring (requires new failing test):
+- Adding features
+- Fixing bugs
+- Changing behavior
+- Adding error handling
+
+**Extract Class/Module refactoring:** When extracting shared functionality into a new class or module:
+- Original tests must stay green and unchanged—they test behavior, not implementation
+- New extracted component needs its own tests (write failing test first, then extract)
+- If original tests break, extraction changed behavior—undo and analyze
+
+Keep tests green throughout. If tests fail, you changed behavior—undo and try again.
 
 ### Repeat
 
 Next failing test for next feature.
+
+## Software Engineering Principles
+
+TDD reinforces these core engineering practices:
+
+| Principle | Definition | TDD Phase |
+|-----------|------------|----------|
+| **YAGNI** | You Aren't Gonna Need It—don't add functionality until required | GREEN: Write minimal code for current test only |
+| **KISS** | Keep It Simple, Stupid—favor simple solutions over clever ones | GREEN: Simplest code to pass, no over-engineering |
+| **DRY** | Don't Repeat Yourself—eliminate duplication | REFACTOR: Extract shared code after tests pass |
+| **SOLID** | Single responsibility, Open-closed, Liskov, Interface segregation, Dependency inversion | REFACTOR: Improve design while tests stay green |
+
+**Key insight:** GREEN phase applies YAGNI/KISS (resist adding features). REFACTOR phase applies DRY/SOLID (improve structure, not behavior).
 
 ## Good Tests
 
