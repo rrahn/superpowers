@@ -187,6 +187,9 @@ Valid refactoring:
 - Extract helpers/functions
 - Simplify complex conditionals
 - Reorganize for readability
+- Apply design patterns to resolve structural problems (see `design-patterns` skill)
+
+**Design pattern guidance:** During REFACTOR, if you observe code smells like growing if/elif chains, class explosions, rigid coupling, or duplicated algorithm skeletons, consult the `design-patterns` skill to select the right pattern. Never apply a pattern speculatively — wait until the smell is concrete and tests are green.
 
 Not refactoring (requires new failing test):
 - Adding features
@@ -386,6 +389,7 @@ When adding mocks or test utilities, read @testing-anti-patterns.md and testing-
 When writing Python code, read @python-best-practices.md for coding standards:
 - Always use type annotations on function arguments and return types
 - Use modern typing syntax (`list[T]`, `X | None`)
+- Apply design patterns during REFACTOR phase — see @python-best-practices.md and the `design-patterns` skill
 
 ## Pytest Best Practices
 
