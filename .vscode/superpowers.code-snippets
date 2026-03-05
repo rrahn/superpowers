@@ -1,0 +1,155 @@
+{
+  "Load Superpowers Framework": {
+    "prefix": "!superpowers",
+    "body": [
+      "Read and follow the instructions in ~/.vscode/superpowers/skills/using-superpowers/SKILL.md",
+      "",
+      "**IMPORTANT:** You are now following the using-superpowers skill. It is ALREADY LOADED.",
+      "",
+      "**Tool Mapping for VS Code:**",
+      "- Skill tool → Ask me to read skill files from ~/.vscode/superpowers/skills/",
+      "- TodoWrite → Use TODO/FIXME comments in code",
+      "- Task with subagents → Break into sequential steps",
+      "- File operations → Use your native file operations",
+      "",
+      "**Available Skills:**",
+      "Read skill files from ~/.vscode/superpowers/skills/<skill-name>/SKILL.md",
+      "",
+      "Key skills: brainstorming, writing-plans, test-driven-development, systematic-debugging, requesting-code-review"
+    ],
+    "description": "Activate Superpowers framework for this session"
+  },
+  "Load Specific Skill": {
+    "prefix": "!skill",
+    "body": [
+      "Read and follow the instructions in ~/.vscode/superpowers/skills/${1:skill-name}/SKILL.md"
+    ],
+    "description": "Load a specific Superpowers skill by name"
+  },
+  "Brainstorming Skill": {
+    "prefix": "!brainstorm",
+    "body": [
+      "Read and follow ~/.vscode/superpowers/skills/brainstorming/SKILL.md",
+      "",
+      "Use Socratic questioning to refine the design before implementation."
+    ],
+    "description": "Load brainstorming skill for design refinement"
+  },
+  "Writing Plans Skill": {
+    "prefix": "!plan",
+    "body": [
+      "Read and follow ~/.vscode/superpowers/skills/writing-plans/SKILL.md",
+      "",
+      "Create a detailed implementation plan with:",
+      "- Bite-sized tasks (2-5 minutes each)",
+      "- Exact file paths and code",
+      "- Verification steps for each task"
+    ],
+    "description": "Load writing-plans skill for implementation planning"
+  },
+  "Test-Driven Development Skill": {
+    "prefix": "!tdd",
+    "body": [
+      "Read and follow ~/.vscode/superpowers/skills/test-driven-development/SKILL.md",
+      "",
+      "Follow RED-GREEN-REFACTOR cycle:",
+      "1. Write failing test (RED)",
+      "2. Watch it fail",
+      "3. Write minimal code (GREEN)",
+      "4. Watch it pass",
+      "5. Refactor if needed",
+      "6. Commit"
+    ],
+    "description": "Load TDD skill for test-driven development"
+  },
+  "Systematic Debugging Skill": {
+    "prefix": "!debug",
+    "body": [
+      "Read and follow ~/.vscode/superpowers/skills/systematic-debugging/SKILL.md",
+      "",
+      "Follow the 4-phase debugging process:",
+      "1. Reproduce reliably",
+      "2. Isolate the problem",
+      "3. Identify root cause",
+      "4. Fix and verify"
+    ],
+    "description": "Load systematic debugging skill"
+  },
+  "Requesting Code Review Skill": {
+    "prefix": "!review",
+    "body": [
+      "Read and follow ~/.vscode/superpowers/skills/requesting-code-review/SKILL.md",
+      "",
+      "Run pre-review checklist before submitting for review."
+    ],
+    "description": "Load code review request skill"
+  },
+  "Receiving Code Review Skill": {
+    "prefix": "!review-response",
+    "body": [
+      "Read and follow ~/.vscode/superpowers/skills/receiving-code-review/SKILL.md",
+      "",
+      "Systematically respond to code review feedback."
+    ],
+    "description": "Load skill for responding to code review"
+  },
+  "Executing Plans Skill": {
+    "prefix": "!execute",
+    "body": [
+      "Read and follow ~/.vscode/superpowers/skills/executing-plans/SKILL.md",
+      "",
+      "Execute the implementation plan in batches with human checkpoints."
+    ],
+    "description": "Load executing plans skill"
+  },
+  "Git Worktrees Skill": {
+    "prefix": "!worktree",
+    "body": [
+      "Read and follow ~/.vscode/superpowers/skills/using-git-worktrees/SKILL.md",
+      "",
+      "Use git worktrees for parallel branch development."
+    ],
+    "description": "Load git worktrees skill"
+  },
+  "Verification Skill": {
+    "prefix": "!verify",
+    "body": [
+      "Read and follow ~/.vscode/superpowers/skills/verification-before-completion/SKILL.md",
+      "",
+      "Verify the work is complete and actually works before finishing."
+    ],
+    "description": "Load verification skill"
+  },
+  "List Available Skills": {
+    "prefix": "!skills",
+    "body": [
+      "Available Superpowers skills (read from ~/.vscode/superpowers/skills/):",
+      "",
+      "**Process Skills:**",
+      "- brainstorming - Design refinement through questions",
+      "- writing-plans - Detailed implementation plans",
+      "- executing-plans - Batch execution with checkpoints",
+      "- subagent-driven-development - Fast iteration workflow",
+      "",
+      "**Quality Skills:**",
+      "- test-driven-development - RED-GREEN-REFACTOR TDD",
+      "- requesting-code-review - Pre-review checklist",
+      "- receiving-code-review - Respond to feedback",
+      "- verification-before-completion - Ensure it works",
+      "",
+      "**Debugging:**",
+      "- systematic-debugging - 4-phase root cause process",
+      "",
+      "**Git Workflows:**",
+      "- using-git-worktrees - Parallel branches",
+      "- finishing-a-development-branch - Merge/PR workflow",
+      "",
+      "**Meta:**",
+      "- using-superpowers - Framework introduction",
+      "- writing-skills - Create new skills",
+      "",
+      "Load any skill: Read ~/.vscode/superpowers/skills/<skill-name>/SKILL.md"
+    ],
+    "description": "Show all available Superpowers skills"
+  }
+}

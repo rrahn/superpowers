@@ -26,7 +26,9 @@ Thanks!
 
 ## Installation
 
-**Note:** Installation differs by platform. Claude Code has a built-in plugin system. Codex and OpenCode require manual setup.
+**Note:** Installation differs by platform. Claude Code has a built-in plugin system. Other platforms require manual setup.
+
+**Not sure which platform to use?** See [Platform Comparison Guide](docs/platform-comparison.md) to choose the best option for your needs.
 
 ### Claude Code (via Plugin Marketplace)
 
@@ -76,6 +78,25 @@ Fetch and follow instructions from https://raw.githubusercontent.com/obra/superp
 ```
 
 **Detailed docs:** [docs/README.opencode.md](docs/README.opencode.md)
+
+### VS Code
+
+VS Code doesn't have a native plugin system, but you can use Superpowers with GitHub Copilot Chat.
+
+**Quick install with GitHub Copilot:**
+
+```bash
+# Install Copilot extensions
+code --install-extension GitHub.copilot-chat
+
+# Clone Superpowers
+git clone https://github.com/obra/superpowers.git ~/.vscode/superpowers
+
+# Copy snippets (see docs for platform-specific paths)
+# Use !superpowers in Copilot Chat to activate
+```
+
+**Detailed docs:** [docs/README.vscode.md](docs/README.vscode.md)
 
 ## The Basic Workflow
 
