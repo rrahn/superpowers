@@ -27,10 +27,16 @@ ls -d worktrees 2>/dev/null      # Alternative
 
 **If found:** Use that directory. If both exist, `.worktrees` wins.
 
-### 2. Check CLAUDE.md
+### 2. Check agent preferences
 
+For claude:
 ```bash
 grep -i "worktree.*director" CLAUDE.md 2>/dev/null
+```
+
+For vscode:
+```bash
+grep -i "worktree.*director" .github/copilot-instructions.md 2>/dev/null
 ```
 
 **If preference specified:** Use it without asking.

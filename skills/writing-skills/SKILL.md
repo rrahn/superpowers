@@ -9,7 +9,7 @@ description: Use when creating new skills, editing existing skills, or verifying
 
 **Writing skills IS Test-Driven Development applied to process documentation.**
 
-**Personal skills live in agent-specific directories (`~/.claude/skills` for Claude Code, `~/.agents/skills/` for Codex)** 
+**Personal skills live in agent-specific directories (`~/.copilot/skills` for VS Code, `~/.agents/skills` for Codex)**
 
 You write test cases (pressure scenarios with subagents), watch them fail (baseline behavior), write the skill (documentation), watch tests pass (agents comply), and refactor (close loopholes).
 
@@ -21,7 +21,7 @@ You write test cases (pressure scenarios with subagents), watch them fail (basel
 
 ## What is a Skill?
 
-A **skill** is a reference guide for proven techniques, patterns, or tools. Skills help future Claude instances find and apply effective approaches.
+A **skill** is a reference guide for proven techniques, patterns, or tools. Skills help future agent instances find and apply effective approaches.
 
 **Skills are:** Reusable techniques, patterns, tools, reference guides
 
