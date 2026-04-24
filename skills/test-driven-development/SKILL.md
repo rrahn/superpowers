@@ -125,6 +125,8 @@ Confirm:
 
 **Test errors?** Fix error, re-run until it fails correctly.
 
+**CHECKPOINT — STOP.** Show the failing test output to the user and wait for explicit confirmation before proceeding to GREEN. Do not silently move on. The user may want to adjust the test before implementation begins.
+
 ### GREEN - Minimal Code
 
 Write simplest code to pass the test.
@@ -176,6 +178,8 @@ Confirm:
 **Test fails?** Fix code, not test.
 
 **Other tests fail?** Fix now.
+
+**CHECKPOINT — STOP.** Show the full passing test output to the user and wait for explicit review before committing or refactoring. The user controls when the cycle advances.
 
 ### REFACTOR - Clean Up
 

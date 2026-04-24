@@ -135,11 +135,13 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 After saving the plan, offer execution choice:
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:**
+**"Plan complete and saved to `docs/plans/<filename>.md`. Three execution options:**
 
 **1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
 
 **2. Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints
+
+**3. User-Steered TDD (this session)** - I follow the TDD skill cycle: write failing test → STOP for your confirmation → implement → STOP for your review → commit. You control every transition.
 
 **Which approach?"**
 
@@ -150,3 +152,8 @@ After saving the plan, offer execution choice:
 **If Inline Execution chosen:**
 - **REQUIRED SUB-SKILL:** Use superpowers:executing-plans
 - Batch execution with checkpoints for review
+
+**If User-Steered TDD chosen:**
+- **REQUIRED SUB-SKILL:** Use superpowers:test-driven-development
+- Follow the TDD skill RED → CHECKPOINT → GREEN → CHECKPOINT → commit cycle
+- Never advance past a checkpoint without explicit user confirmation
