@@ -146,9 +146,35 @@ For each partition:
 
 Repeat for each partition in order.
 
+#### Shell constraints — READ THIS BEFORE RUNNING `git commit`
+
+The shell is **fish**, running non-interactively. There is no TTY.
+
+- **NEVER use a heredoc.** fish does not support `<<EOF` syntax. A command like
+  `git commit -m "$(cat <<'EOF' ... EOF)"` will not parse, will garble the
+  terminal, and may hang the session waiting on input that can never arrive.
+- **Build multi-line messages from repeated `-m` flags**, one per paragraph.
+  Git joins them with blank lines, which produces exactly the subject/body
+  layout you want:
+
+  ```fish
+  git commit -m 'refactor(tests): move shared fixtures to conftest.py' \
+             -m 'Every test module repeated the same mock and sys.path setup.' \
+             -m 'Duplication meant a change to the bin/ import path had to be
+  applied in four places, and drift between them was silent.'
+  ```
+
+- **Single-quote every `-m` argument.** Double quotes let fish expand `$`,
+  backticks, and `(...)` inside your commit prose. If the message itself must
+  contain an apostrophe, close and reopen the quote: `'don'\''t'`.
+- Prefix read-only git commands with `GIT_PAGER=cat` so no pager blocks.
+- Never run bare `git commit` — it opens an editor and will hang forever.
+
 ## RULES
 
 - **NEVER** execute any commands that might lead to data loss
+- **NEVER** use heredoc (`<<EOF`) syntax — the shell is fish and it will break
+- **NEVER** run bare `git commit` without `-m` — it opens an editor and hangs
 - **NEVER** commit `.env` files, credentials, API keys, or secrets
 - **NEVER** force push (`git push --force`)
 - **NEVER** amend commits that have been pushed to a remote

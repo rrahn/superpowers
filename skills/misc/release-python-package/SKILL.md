@@ -68,16 +68,56 @@ Write the PR body to a temp file (reuse the changelog section content — do NOT
 heredocs). Then run [push-and-pr.sh](./scripts/push-and-pr.sh) `<X.Y.Z>` `<body-file>`.
 Pushes the branch and opens a PR titled `Release vX.Y.Z` against the default branch.
 
-### 7. Verify, report and note the tag step
-Confirm the PR was created by running `gh pr view --json url,state,baseRefName`
-(it should report `OPEN` against the default branch). Report the PR URL to the
-user. Remind them that because versioning is driven by `setuptools_scm`, a
-matching `vX.Y.Z` **tag must be created on the merge commit** for the package to
-build as `X.Y.Z` (commands in
-[changelog-format.md](./references/changelog-format.md) → "After the PR merges").
+### 7. Detect auto-release workflow, report, and WAIT for human confirmation
+
+Run [detect-release-workflow.sh](./scripts/detect-release-workflow.sh). It scans
+`.github/workflows/` for a workflow that auto-creates a tag and GitHub release when
+a `release/vX.Y.Z` branch is merged.
+
+Confirm the PR is open: `gh pr view --json url,state,baseRefName` (must be `OPEN`
+against the default branch).
+
+Report to the user:
+- The PR URL.
+- The auto-release finding:
+  - `AUTO_RELEASE=true` → "This repo has `WORKFLOW_FILE` which will automatically
+    create the `vX.Y.Z` tag and GitHub release when the PR is merged. The release
+    notes will be auto-generated from PR titles; I will update them with the
+    curated changelog after merge."
+  - `AUTO_RELEASE=false` → "No auto-release workflow found. After merging the PR,
+    confirm back and I will create the tag and GitHub release."
+
+**STOP here.** End your turn. Do not proceed until the user responds with one of:
+- **"merged"** (or equivalent) → continue to step 8.
+- **"abort"** (or equivalent) → stop; remind them to delete the branch locally and
+  on origin if needed.
+- **Requested changes** → apply them, amend/push the branch, and wait again.
+
+### 8. Post-merge finalization (conditional on auto-release)
+
+Once the user confirms the PR was merged, switch to the default branch and pull:
+
+```bash
+git checkout <default_branch> && git pull
+```
+
+Then run [finalize-release.sh](./scripts/finalize-release.sh) `<X.Y.Z>`.
+The script handles both cases automatically:
+
+- **`AUTO_RELEASE=true`** (workflow-driven repo): the CI workflow will have already
+  created the tag on the merge commit and a GitHub release with auto-generated notes.
+  `finalize-release.sh` detects the existing release and **updates its body** with the
+  curated notes extracted from `CHANGELOG.md`.
+- **`AUTO_RELEASE=false`** (manual repo): `finalize-release.sh` creates the `vX.Y.Z`
+  tag on `HEAD` of the default branch, pushes it, and opens a new GitHub release with
+  the curated changelog notes.
+
+Report the final release URL to the user.
 
 ## Scripts
 - [release-state.sh](./scripts/release-state.sh) — evaluate git/version state (read-only).
 - [create-release-branch.sh](./scripts/create-release-branch.sh) — create `release/vX.Y.Z`.
 - [commit-changelog.sh](./scripts/commit-changelog.sh) — commit `CHANGELOG.md`.
 - [push-and-pr.sh](./scripts/push-and-pr.sh) — push branch + open PR via `gh`.
+- [detect-release-workflow.sh](./scripts/detect-release-workflow.sh) — detect auto-release CI workflows (read-only).
+- [finalize-release.sh](./scripts/finalize-release.sh) — post-merge: ensure tag + create/update GitHub release.
