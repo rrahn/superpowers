@@ -34,6 +34,7 @@ class FakeGitHub:
     truncated: bool = False
     unreadable: set[str] = field(default_factory=set)
     executables: set[str] = field(default_factory=set)
+    symlinks: set[str] = field(default_factory=set)
 
     def _tree(self) -> dict[str, object]:
         dirs = {p.rsplit("/", i)[0] for p in self.files for i in range(1, p.count("/") + 1)}
@@ -45,7 +46,11 @@ class FakeGitHub:
                 "path": p,
                 "type": "blob",
                 "sha": git_blob_sha(c.encode()),
-                "mode": "100755" if p in self.executables else "100644",
+                "mode": "120000"
+                if p in self.symlinks
+                else "100755"
+                if p in self.executables
+                else "100644",
             }
             for p, c in self.files.items()
         ]

@@ -192,3 +192,72 @@ def test_sync_tells_the_user_to_review_and_commit(
     out = run("upstream", "sync", "--yes")
 
     assert "git diff" in out.text
+
+
+def test_files_the_change_set_does_not_mention_are_kept(
+    catalog_repo: Path, run: Callable[..., Run]
+) -> None:
+    tdd = catalog_repo / "skills" / "mattpocock" / "engineering" / "tdd"
+    (tdd / ".editorconfig").write_text("root = true\n")
+
+    run("upstream", "sync", "--yes")
+
+    assert (tdd / ".editorconfig").read_text() == "root = true\n"
+
+
+def test_directories_emptied_by_deletions_are_removed(
+    catalog_repo: Path, run: Callable[..., Run]
+) -> None:
+    tdd = catalog_repo / "skills" / "mattpocock" / "engineering" / "tdd"
+    write_files(tdd, {"old/nested/gone.md": "# gone\n"})
+
+    run("upstream", "sync", "--yes")
+
+    assert not (tdd / "old").exists()
+
+
+def test_symlinks_upstream_are_refused_and_the_skill_left_untouched(
+    catalog_repo: Path, github: FakeGitHub, run: Callable[..., Run]
+) -> None:
+    github.files["skills/engineering/tdd/link.md"] = "tests.md"
+    github.symlinks = {"skills/engineering/tdd/link.md"}
+    tdd = catalog_repo / "skills" / "mattpocock" / "engineering" / "tdd"
+    before = tree(tdd)
+
+    out = run("upstream", "sync", "mattpocock", "engineering/tdd", "--yes")
+
+    assert out.result.exit_code == 1
+    assert "symlink" in out.text
+    assert tree(tdd) == before
+
+
+def test_local_origin_symlinks_leaving_the_skill_are_refused(
+    catalog_repo: Path, home: Path, run: Callable[..., Run]
+) -> None:
+    (home / "dev" / "caveman" / "secrets").symlink_to(home)
+
+    out = run("upstream", "sync", "misc", "--yes")
+
+    assert out.result.exit_code == 1
+    assert "points outside" in out.text
+    assert not (catalog_repo / "skills" / "misc" / "caveman" / "secrets").exists()
+
+
+def test_naming_a_skill_with_nothing_to_sync_says_why(
+    catalog_repo: Path, run: Callable[..., Run]
+) -> None:
+    out = run("upstream", "sync", "mattpocock", "engineering/grill-me", "--yes")
+
+    assert out.result.exit_code == 1
+    assert "engineering/grill-me is unchanged" in out.text
+
+
+def test_a_partial_failure_reports_what_was_already_synced(
+    catalog_repo: Path, github: FakeGitHub, run: Callable[..., Run]
+) -> None:
+    github.unreadable = {"skills/engineering/triage/run.sh"}
+
+    out = run("upstream", "sync", "mattpocock", "--yes")
+
+    assert out.result.exit_code == 1
+    assert "1 skill(s) synced before the failure" in out.text.replace("\n", " ")

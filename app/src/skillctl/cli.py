@@ -238,7 +238,8 @@ def create_app(deps: Dependencies) -> typer.Typer:
             str | None, typer.Argument(help="Only this collection (default: all).")
         ] = None,
         skills: Annotated[
-            list[str] | None, typer.Argument(help="Only these skill paths in the collection.")
+            list[str] | None,
+            typer.Argument(help="Only these skill paths; give the collection first."),
         ] = None,
         dry_run: Annotated[
             bool, typer.Option("--dry-run", help="Show the plan; write nothing.")

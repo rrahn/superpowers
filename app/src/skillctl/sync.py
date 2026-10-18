@@ -31,12 +31,15 @@ def plan_sync(reports: list[CollectionReport], skills: list[str]) -> list[Collec
         Reports holding only pending skills; collections without any are dropped.
 
     Raises:
-        SyncError: A named skill isn't in any report.
+        SyncError: A named skill isn't in any report, or has nothing to sync.
     """
-    known = {c.skill for r in reports for c in r.skills}
-    unknown = sorted(set(skills) - known)
+    status = {c.skill: c.status for r in reports for c in r.skills}
+    unknown = sorted(set(skills) - status.keys())
     if unknown:
         raise SyncError(f"No such skill in the checked collections: {', '.join(unknown)}")
+    idle = sorted(s for s in skills if status[s] not in PENDING)
+    if idle:
+        raise SyncError("; ".join(f"{s} is {status[s]}, nothing to sync" for s in idle))
     planned = []
     for report in reports:
         pending = tuple(
@@ -70,12 +73,18 @@ class Synchronizer:
             How many skills were written.
 
         Raises:
-            SyncError: A file couldn't be fetched or is unsafe to write.
+            SyncError: A file couldn't be fetched or is unsafe to write; the message says how
+                many skills were already written.
         """
         written = 0
         for report in plan:
             for change in report.skills:
-                self._apply(self._root / report.collection / change.skill, change)
+                try:
+                    self._apply(self._root / report.collection / change.skill, change)
+                except (SyncError, OSError) as error:
+                    raise SyncError(
+                        f"{error} ({written} skill(s) synced before the failure)"
+                    ) from error
                 written += 1
         return written
 
@@ -96,7 +105,10 @@ class Synchronizer:
         if isinstance(origin, LocalOrigin):
             source = origin.directory / relative
             if source.is_symlink():
-                os.symlink(os.readlink(source), destination)
+                link = os.readlink(source)
+                if not (source.parent / link).resolve().is_relative_to(origin.directory.resolve()):
+                    raise SyncError(f"{change.skill}: {relative} points outside the skill")
+                os.symlink(link, destination)
             else:
                 shutil.copyfile(source, destination)
                 destination.chmod(0o755 if os.access(source, os.X_OK) else 0o644)
@@ -123,6 +135,6 @@ def _inside(root: Path, relative: str) -> Path:
 
 def _prune_empty_parents(root: Path, removed: Path) -> None:
     for parent in removed.parents:
-        if parent == root or any(parent.iterdir()):
+        if parent == root or not parent.is_dir() or any(parent.iterdir()):
             return
         parent.rmdir()
