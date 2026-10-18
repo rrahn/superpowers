@@ -129,6 +129,8 @@ def create_app(deps: Dependencies) -> typer.Typer:
             _fail(f"{error}. Use --force to replace it.")
         except (DownloadError, LockfileError) as error:
             _fail(str(error))
+        except httpx.HTTPError as error:
+            _fail(f"Could not reach GitHub ({error}).")
         deps.console.print(
             f"[green]Installed[/] [bold]{skill.name}[/] from {skill.path} into {scope.root}"
         )

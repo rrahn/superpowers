@@ -1,4 +1,5 @@
 import json
+import os
 from collections.abc import Callable
 from pathlib import Path
 
@@ -59,7 +60,48 @@ def test_install_records_where_the_skill_came_from(
     lock = json.loads((global_root(home) / ".skillctl-lock.json").read_text())
     entry = lock["skills"]["tdd"]
     assert (entry["repo"], entry["ref"], entry["path"]) == ("rrahn/superpowers", "main", TDD)
+    assert entry["commit"] == github.commit
     assert entry["tree_sha"]
+
+
+def test_install_keeps_executable_scripts_executable(
+    github: FakeGitHub, home: Path, run: Callable[..., Run]
+) -> None:
+    seed(github)
+    github.files[f"{TDD}/scripts/check.sh"] = "#!/bin/sh\necho ok\n"
+    github.executables = {f"{TDD}/scripts/check.sh"}
+
+    run("install", "tdd")
+
+    installed = global_root(home) / "tdd"
+    assert os.access(installed / "scripts" / "check.sh", os.X_OK)
+    assert not os.access(installed / "tests.md", os.X_OK)
+
+
+def test_install_reports_an_unreachable_github_without_a_traceback(
+    github: FakeGitHub, run: Callable[..., Run]
+) -> None:
+    github.fail = True
+
+    out = run("install", "tdd")
+
+    assert out.result.exit_code == 1
+    assert "Could not reach GitHub" in out.text
+
+
+def test_failed_download_with_force_keeps_the_existing_installation(
+    github: FakeGitHub, home: Path, run: Callable[..., Run]
+) -> None:
+    seed(github)
+    existing = global_root(home) / "tdd"
+    existing.mkdir(parents=True)
+    (existing / "SKILL.md").write_text("keep me")
+    github.unreadable = {f"{TDD}/tests.md"}
+
+    out = run("install", "tdd", "--force")
+
+    assert out.result.exit_code == 1
+    assert files_under(existing) == {"SKILL.md": "keep me"}
 
 
 def test_install_refuses_to_overwrite_without_force(

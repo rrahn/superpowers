@@ -7,7 +7,7 @@ from pathlib import Path
 import httpx
 
 from skillctl.catalog import Catalog, CatalogSkill
-from skillctl.scopes import Scope
+from skillctl.scopes import LockEntry, Scope
 
 
 class AlreadyInstalledError(Exception):
@@ -15,7 +15,7 @@ class AlreadyInstalledError(Exception):
 
 
 class DownloadError(Exception):
-    """A file of the skill couldn't be downloaded; nothing was written."""
+    """A file of the skill couldn't be downloaded or written; nothing was changed."""
 
 
 class Installer:
@@ -27,8 +27,9 @@ class Installer:
     def install(self, name: str, scope: Scope, *, force: bool = False) -> CatalogSkill:
         """Install the catalog skill `name` into `scope`.
 
-        Files are staged in a hidden directory inside the scope and moved into place only after
-        every download succeeded, so a failure never leaves a partial skill behind.
+        Files are staged in a hidden directory inside the scope. Only after every download
+        succeeded does the staged directory replace the target, and an existing installation is
+        moved aside first so it can be restored if the swap fails.
 
         Args:
             name: Catalog skill name.
@@ -43,6 +44,7 @@ class Installer:
             AlreadyInstalledError: `name` exists in the scope and `force` is False.
             DownloadError: A file couldn't be downloaded.
             LockfileError: The scope's lockfile is malformed.
+            httpx.HTTPError: GitHub couldn't be reached.
         """
         skill = self._catalog.find(name)
         target = scope.root / skill.name
@@ -52,27 +54,45 @@ class Installer:
         scope.root.mkdir(parents=True, exist_ok=True)
         staging = Path(tempfile.mkdtemp(prefix=f".{skill.name}-", dir=scope.root))
         try:
+            staging.chmod(0o755)
             self._download(skill, staging)
-            _remove(target)
-            staging.rename(target)
+            _swap_into_place(staging, target)
         finally:
             shutil.rmtree(staging, ignore_errors=True)
         where = self._catalog.where
         scope.lockfile.record(
             skill.name,
-            {"repo": where.repo, "ref": where.ref, "path": skill.path, "tree_sha": skill.tree_sha},
+            LockEntry(where.repo, where.ref, self._catalog.commit, skill.path, skill.tree_sha),
         )
         return skill
 
     def _download(self, skill: CatalogSkill, into: Path) -> None:
-        for relative in self._catalog.files(skill):
+        for file in self._catalog.files(skill):
+            destination = (into / file.path).resolve()
+            if file.symlink or not destination.is_relative_to(into.resolve()):
+                raise DownloadError(f"Refusing to install {skill.name}: unsafe entry {file.path}")
             try:
-                content = self._catalog.read(skill, relative)
+                content = self._catalog.read(skill, file)
             except httpx.HTTPError as error:
-                raise DownloadError(f"Could not download {skill.name}: {relative}") from error
-            destination = into / relative
+                raise DownloadError(f"Could not download {skill.name}: {file.path}") from error
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(content)
+            destination.chmod(0o755 if file.executable else 0o644)
+
+
+def _swap_into_place(staging: Path, target: Path) -> None:
+    backup = target.with_name(f".{target.name}.previous")
+    _remove(backup)
+    had_previous = _exists(target)
+    if had_previous:
+        target.rename(backup)
+    try:
+        staging.rename(target)
+    except OSError:
+        if had_previous:
+            backup.rename(target)
+        raise
+    _remove(backup)
 
 
 def _exists(path: Path) -> bool:

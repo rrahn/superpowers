@@ -25,6 +25,15 @@ class CatalogSkill:
     tree_sha: str
 
 
+@dataclass(frozen=True)
+class SkillFile:
+    """One file inside a catalog skill, as git records it."""
+
+    path: str
+    executable: bool
+    symlink: bool
+
+
 class SkillNotFoundError(Exception):
     """No catalog skill has the requested name."""
 
@@ -68,7 +77,8 @@ class CatalogQuery:
 class Catalog:
     """Discovers and reads skills in the catalog repository through GitHub.
 
-    One instance reads the repository tree once and reuses it for every call.
+    One instance resolves the ref to a commit once and reads the tree and every file at that
+    commit, so a branch moving mid-command can't mix files from two commits.
     """
 
     def __init__(self, github: GitHubClient, where: CatalogRef) -> None:
@@ -81,8 +91,13 @@ class Catalog:
         return self._where
 
     @cached_property
+    def commit(self) -> str:
+        """The commit the ref pointed at when this catalog first read it."""
+        return self._github.commit(self._where.repo, self._where.ref)
+
+    @cached_property
     def _entries(self) -> list[TreeEntry]:
-        return self._github.tree(self._where.repo, self._where.ref)
+        return self._github.tree(self._where.repo, self.commit)
 
     @cached_property
     def _tree_shas(self) -> dict[str, str]:
@@ -125,23 +140,39 @@ class Catalog:
                     return skill
         raise SkillNotFoundError(name, get_close_matches(name, sorted(self.names()), n=3))
 
-    def files(self, skill: CatalogSkill) -> list[str]:
-        """List every file of `skill`, relative to its directory."""
+    def files(self, skill: CatalogSkill) -> list[SkillFile]:
+        """List every file of a skill.
+
+        Args:
+            skill: A skill from this catalog.
+
+        Returns:
+            Its files with paths relative to the skill directory, sorted by path.
+        """
         prefix = f"{skill.path}/"
         return sorted(
-            e.path.removeprefix(prefix)
-            for e in self._entries
-            if e.type == "blob" and e.path.startswith(prefix)
+            (
+                SkillFile(e.path.removeprefix(prefix), e.executable, e.symlink)
+                for e in self._entries
+                if e.type == "blob" and e.path.startswith(prefix)
+            ),
+            key=lambda f: f.path,
         )
 
-    def read(self, skill: CatalogSkill, relative_path: str) -> bytes:
-        """Download one file of `skill`."""
-        return self._github.read_bytes(
-            self._where.repo, self._where.ref, f"{skill.path}/{relative_path}"
-        )
+    def read(self, skill: CatalogSkill, file: SkillFile) -> bytes:
+        """Download one file of a skill.
+
+        Args:
+            skill: A skill from this catalog.
+            file: One of `files(skill)`.
+
+        Returns:
+            The file's raw content at the pinned commit.
+        """
+        return self._github.read_bytes(self._where.repo, self.commit, f"{skill.path}/{file.path}")
 
     def _read(self, path: str) -> str:
-        return self._github.read_text(self._where.repo, self._where.ref, path)
+        return self._github.read_text(self._where.repo, self.commit, path)
 
     def names(self) -> set[str]:
         """Cheaply list skill names from the tree alone, without reading any `SKILL.md`.

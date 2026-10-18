@@ -16,6 +16,17 @@ class TreeEntry:
     path: str
     type: Literal["tree", "blob", "commit"]
     sha: str
+    mode: str = "100644"
+
+    @property
+    def executable(self) -> bool:
+        """Whether git records this file as executable."""
+        return self.mode == "100755"
+
+    @property
+    def symlink(self) -> bool:
+        """Whether git records this entry as a symbolic link."""
+        return self.mode == "120000"
 
 
 class GitHubClient:
@@ -23,6 +34,23 @@ class GitHubClient:
 
     def __init__(self, http: httpx.Client) -> None:
         self._http = http
+
+    def commit(self, repo: str, ref: str) -> str:
+        """Resolve `ref` to the commit SHA it currently points at.
+
+        Args:
+            repo: Repository as `owner/name`.
+            ref: Branch, tag, or commit.
+
+        Returns:
+            The full 40-character commit SHA.
+        """
+        response = self._http.get(
+            f"{API}/repos/{repo}/commits/{ref}",
+            headers={"Accept": "application/vnd.github.sha"},
+        )
+        response.raise_for_status()
+        return response.text.strip()
 
     def tree(self, repo: str, ref: str) -> list[TreeEntry]:
         """List every path in `repo` at `ref`.
@@ -41,7 +69,8 @@ class GitHubClient:
         )
         response.raise_for_status()
         return [
-            TreeEntry(path=e["path"], type=e["type"], sha=e["sha"]) for e in response.json()["tree"]
+            TreeEntry(path=e["path"], type=e["type"], sha=e["sha"], mode=e.get("mode", "100644"))
+            for e in response.json()["tree"]
         ]
 
     def read_text(self, repo: str, ref: str, path: str) -> str:

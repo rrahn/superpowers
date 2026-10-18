@@ -14,29 +14,44 @@ from skillctl.github import GitHubClient
 
 @dataclass
 class FakeGitHub:
-    """Serves one repository's files through the GitHub trees API and raw endpoints."""
+    """Serves one repository: `ref` resolves to `commit`; trees and files exist only at `commit`."""
 
     files: dict[str, str] = field(default_factory=dict)
     repo: str = "rrahn/superpowers"
     ref: str = "main"
+    commit: str = "c0ffee0000000000000000000000000000000000"
     requests: list[httpx.Request] = field(default_factory=list)
     fail: bool = False
     unreadable: set[str] = field(default_factory=set)
+    executables: set[str] = field(default_factory=set)
 
     def _tree(self) -> dict[str, object]:
         dirs = {p.rsplit("/", i)[0] for p in self.files for i in range(1, p.count("/") + 1)}
-        entries = [{"path": d, "type": "tree", "sha": _sha(d)} for d in sorted(dirs)]
-        entries += [{"path": p, "type": "blob", "sha": _sha(c)} for p, c in self.files.items()]
-        return {"sha": "commit-sha", "tree": entries, "truncated": False}
+        entries = [
+            {"path": d, "type": "tree", "sha": _sha(d), "mode": "040000"} for d in sorted(dirs)
+        ]
+        entries += [
+            {
+                "path": p,
+                "type": "blob",
+                "sha": _sha(c),
+                "mode": "100755" if p in self.executables else "100644",
+            }
+            for p, c in self.files.items()
+        ]
+        return {"sha": _sha("root"), "tree": entries, "truncated": False}
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
         if self.fail:
             return httpx.Response(503, json={"message": "Service Unavailable"})
         url = request.url
-        if url.host == "api.github.com" and url.path == f"/repos/{self.repo}/git/trees/{self.ref}":
+        api = f"/repos/{self.repo}"
+        if url.host == "api.github.com" and url.path == f"{api}/commits/{self.ref}":
+            return httpx.Response(200, text=self.commit)
+        if url.host == "api.github.com" and url.path == f"{api}/git/trees/{self.commit}":
             return httpx.Response(200, json=self._tree())
-        prefix = f"/{self.repo}/{self.ref}/"
+        prefix = f"/{self.repo}/{self.commit}/"
         if url.host == "raw.githubusercontent.com" and url.path.startswith(prefix):
             path = url.path.removeprefix(prefix)
             if path in self.files and path not in self.unreadable:
