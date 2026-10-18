@@ -9,3 +9,6 @@
 - [ ] Repo/ref override works for every catalog command
 - [ ] Token never printed
 - [ ] Rate limit message mentions setting a token
+- [ ] A truncated git tree (huge repos) is reported, not silently listed partially
+- [ ] One failing `SKILL.md` fetch yields an actionable message, not a traceback
+- [ ] The default `httpx.Client` is closed when the command ends

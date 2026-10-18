@@ -1,0 +1,14 @@
+# serializer version: 1
+# name: test_available_lists_catalog_skills_with_collection_and_description
+  '''
+  Available skills · rrahn/superpowers@main                                                           
+  ┏━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+  ┃ Skill         ┃ Collection  ┃ Description                                                        ┃
+  ┡━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+  │ tdd           │ mattpocock  │ Test-driven development.                                           │
+  │ brainstorming │ superpowers │ Turn ideas into designs.                                           │
+  └───────────────┴─────────────┴────────────────────────────────────────────────────────────────────┘
+                                                2 skills                                              
+  
+  '''
+# ---

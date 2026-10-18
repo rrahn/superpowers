@@ -4,10 +4,10 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Only directories whose `SKILL.md` frontmatter name matches the directory name are listed
-- [ ] Filters by collection and case-insensitive search over name and description
-- [ ] `--json` emits a stable list of objects
-- [ ] Text and SVG snapshot of the table
-- [ ] `GitHubClient` tested at its seam with `httpx.MockTransport`
+- [x] Only directories whose `SKILL.md` frontmatter name matches the directory name are listed
+- [x] Filters by collection and case-insensitive search over name and description
+- [x] `--json` emits a stable list of objects
+- [x] Text and SVG snapshot of the table
+- [x] `GitHubClient` tested at its seam with `httpx.MockTransport`
