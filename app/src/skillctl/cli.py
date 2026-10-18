@@ -16,6 +16,7 @@ from skillctl import views
 from skillctl.catalog import Catalog, CatalogQuery, CatalogRef
 from skillctl.errors import SkillctlError
 from skillctl.github import GitHubClient, GitHubError, token_from_env
+from skillctl.importer import LocalImporter
 from skillctl.installer import Installer
 from skillctl.scopes import ScopeName, Scopes
 from skillctl.sources import SOURCES_FILE, SourcesFile, github_upstream
@@ -223,12 +224,32 @@ def create_app(deps: Dependencies) -> typer.Typer:
     ) -> None:
         """Show what syncing with upstream would change. Writes nothing."""
         with reported():
-            checker = UpstreamChecker(deps.github, SourcesFile.find(deps.cwd))
+            checker = UpstreamChecker(deps.github, SourcesFile.find(deps.cwd), deps.home)
             reports = checker.check(collection)
         if as_json:
             deps.console.print_json(data=views.upstream_json(reports))
         else:
             deps.console.print(views.upstream_table(reports))
+
+    @upstream_app.command("import")
+    def upstream_import(
+        path: Annotated[Path, typer.Argument(help="Directory of the skill to import.")],
+        collection: Annotated[
+            str, typer.Option("--collection", "-c", help="Collection under skills/.")
+        ],
+        force: Annotated[
+            bool, typer.Option("--force", "-f", help="Replace an existing catalog skill.")
+        ] = False,
+    ) -> None:
+        """Copy an internally maintained skill into a collection and record where it came from."""
+        with reported():
+            sources = SourcesFile.find(deps.cwd)
+            source = path if path.is_absolute() else deps.cwd / path
+            target = LocalImporter(sources, deps.home).import_skill(source, collection, force=force)
+        deps.console.print(
+            f"[green]Imported[/] {target.relative_to(sources.root)} ← {source}\n"
+            "[dim]Review and commit the changes; `skillctl upstream check` compares it later.[/]"
+        )
 
     return app
 

@@ -15,7 +15,6 @@ _STATUS_STYLE = {
     "new": "[green]new[/]",
     "orphaned": "[magenta]orphaned[/]",
     "unavailable": "[red]unavailable[/]",
-    "skipped": "[dim]skipped[/]",
     "no-upstream": "[dim]no upstream[/]",
 }
 
@@ -43,6 +42,7 @@ def upstream_json(reports: list[CollectionReport]) -> list[dict[str, object]]:
                     "added": list(s.added),
                     "modified": list(s.modified),
                     "deleted": list(s.deleted),
+                    "reason": s.reason,
                 }
                 for s in r.skills
             ],
@@ -67,26 +67,29 @@ def upstream_table(reports: list[CollectionReport]) -> Table:
     table.add_column("Skill", style="cyan", overflow="fold", ratio=1)
     table.add_column("Status", no_wrap=True)
     table.add_column("Would change", overflow="fold", ratio=1)
-    counts = dict.fromkeys(("changed", "new", "orphaned", "unchanged"), 0)
+    counts = dict.fromkeys(("changed", "new", "orphaned", "unavailable", "unchanged"), 0)
     for report in reports:
         heading = f"[bold magenta]{report.collection}[/] [dim]{report.upstream or ''}[/]"
-        if report.status != "checked":
+        if report.status == "checked":
+            detail = f"[dim]@ {report.commit[:12]}[/]" if report.commit else ""
+            table.add_row(heading, "", detail)
+        else:
             reason = f"[dim]{report.reason or ''}[/]"
-            table.add_row(heading, _STATUS_STYLE[report.status], reason, end_section=True)
-            continue
-        table.add_row(heading, "", f"[dim]@ {(report.commit or '')[:12]}[/]")
+            table.add_row(heading, _STATUS_STYLE[report.status], reason)
         for skill in report.skills:
             counts[skill.status] += 1
             if skill.status != "unchanged":
                 table.add_row(f"  {skill.skill}", _STATUS_STYLE[skill.status], _changes(skill))
         table.add_section()
-    table.caption = " · ".join(f"{n} {status}" for status, n in counts.items())
+    table.caption = " · ".join(f"{n} {status}" for status, n in counts.items() if n)
     return table
 
 
 def _changes(skill: SkillChange) -> str:
     if skill.status == "orphaned":
         return "[dim]kept — no longer upstream[/]"
+    if skill.status == "unavailable":
+        return f"[dim]kept — {skill.reason}[/]"
     lines = [f"[green]+ {p}[/]" for p in skill.added]
     lines += [f"[yellow]~ {p}[/]" for p in skill.modified]
     lines += [f"[red]- {p}[/]" for p in skill.deleted]

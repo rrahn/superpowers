@@ -109,7 +109,21 @@ def test_report_records_the_upstream_commit_it_compared_against(
     assert report["mattpocock"]["commit"] == github.commit
 
 
-def test_local_upstreams_are_skipped_not_unavailable(
+def test_a_collection_with_a_local_upstream_is_compared_with_that_directory(
+    catalog_repo: Path, home: Path, run: Callable[..., Run]
+) -> None:
+    write(home / "private-skills", {"nxf-test/SKILL.md": skill_md("nxf-test", "Newer.")})
+    write(catalog_repo / "skills", {"private/nxf-test/SKILL.md": skill_md("nxf-test", "Old.")})
+    private = '\n[collections.private]\nupstream = { local = "~/private-skills" }\n'
+    (catalog_repo / "skills" / "sources.toml").write_text(SOURCES + private)
+
+    report = {c["collection"]: c for c in run("upstream", "check", "--json").json()}
+
+    assert report["private"]["status"] == "checked"
+    assert report["private"]["skills"][0]["modified"] == ["SKILL.md"]
+
+
+def test_a_missing_local_upstream_is_unavailable(
     catalog_repo: Path, run: Callable[..., Run]
 ) -> None:
     sources = catalog_repo / "skills" / "sources.toml"
@@ -117,7 +131,8 @@ def test_local_upstreams_are_skipped_not_unavailable(
 
     report = {c["collection"]: c for c in run("upstream", "check", "--json").json()}
 
-    assert report["private"]["status"] == "skipped"
+    assert report["private"]["status"] == "unavailable"
+    assert report["private"]["reason"] == "/nowhere not found on this machine"
 
 
 def test_check_reports_file_level_changes(catalog_repo: Path, run: Callable[..., Run]) -> None:
@@ -130,6 +145,7 @@ def test_check_reports_file_level_changes(catalog_repo: Path, run: Callable[...,
         "added": ["mocking.md"],
         "modified": ["tests.md"],
         "deleted": ["legacy.md"],
+        "reason": None,
     }
 
 

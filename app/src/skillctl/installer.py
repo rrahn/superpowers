@@ -1,11 +1,10 @@
 """Installing catalog skills into a scope."""
 
-import shutil
-import tempfile
 from pathlib import Path
 
 from skillctl.catalog import Catalog, CatalogSkill
 from skillctl.errors import SkillctlError
+from skillctl.fsops import exists, replacing
 from skillctl.github import GitHubError
 from skillctl.scopes import LockEntry, Scope
 
@@ -48,19 +47,13 @@ class Installer:
         """
         skill = self._catalog.find(name)
         target = scope.root / skill.name
-        if _exists(target) and not force:
+        if exists(target) and not force:
             raise AlreadyInstalledError(
                 f"{skill.name} is already installed in {scope.root}. Use --force to replace it."
             )
         scope.lockfile.entries()  # fail on a malformed lockfile before touching any files
-        scope.root.mkdir(parents=True, exist_ok=True)
-        staging = Path(tempfile.mkdtemp(prefix=f".{skill.name}-", dir=scope.root))
-        try:
-            staging.chmod(0o755)
+        with replacing(target) as staging:
             self._download(skill, staging)
-            _swap_into_place(staging, target)
-        finally:
-            shutil.rmtree(staging, ignore_errors=True)
         where = self._catalog.where
         scope.lockfile.record(
             skill.name,
@@ -80,29 +73,3 @@ class Installer:
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(content)
             destination.chmod(0o755 if file.executable else 0o644)
-
-
-def _swap_into_place(staging: Path, target: Path) -> None:
-    backup = target.with_name(f".{target.name}.previous")
-    _remove(backup)
-    had_previous = _exists(target)
-    if had_previous:
-        target.rename(backup)
-    try:
-        staging.rename(target)
-    except OSError:
-        if had_previous:
-            backup.rename(target)
-        raise
-    _remove(backup)
-
-
-def _exists(path: Path) -> bool:
-    return path.is_symlink() or path.exists()
-
-
-def _remove(path: Path) -> None:
-    if path.is_symlink() or path.is_file():
-        path.unlink()
-    elif path.exists():
-        shutil.rmtree(path)

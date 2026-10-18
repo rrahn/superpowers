@@ -9,8 +9,10 @@ from hashlib import sha1
 from pathlib import Path, PurePosixPath
 from typing import Literal
 
+from skillctl.errors import SkillctlError
+from skillctl.fsops import is_ignored
 from skillctl.github import GitHubClient, GitHubError
-from skillctl.sources import GitHubUpstream, SourcesError, SourcesFile, Upstream
+from skillctl.sources import Collection, GitHubUpstream, LocalUpstream, SourcesError, SourcesFile
 
 FileTree = dict[str, str]
 """File path (relative to the skill) → git identity `"<mode> <blob sha>"`."""
@@ -18,7 +20,7 @@ FileTree = dict[str, str]
 SkillTrees = dict[str, FileTree]
 """Skill path (relative to the collection / upstream path) → its files."""
 
-Status = Literal["unchanged", "changed", "new", "orphaned"]
+Status = Literal["unchanged", "changed", "new", "orphaned", "unavailable"]
 
 
 @dataclass(frozen=True)
@@ -30,6 +32,7 @@ class SkillChange:
     added: tuple[str, ...] = field(default=())
     modified: tuple[str, ...] = field(default=())
     deleted: tuple[str, ...] = field(default=())
+    reason: str | None = None
 
 
 def plan(*, local: SkillTrees, upstream: SkillTrees) -> list[SkillChange]:
@@ -67,8 +70,8 @@ def git_blob_sha(content: bytes) -> str:
 def group_by_skill(files: Iterable[tuple[str, str]]) -> SkillTrees:
     """Group `(path, identity)` pairs under the deepest directory that holds a `SKILL.md`.
 
-    Hidden files and directories are ignored on both sides of a comparison, and a `SKILL.md` at
-    the root itself is not a skill.
+    Hidden files and directories and `__pycache__` are ignored on both sides of a comparison,
+    and a `SKILL.md` at the root itself is not a skill.
 
     Args:
         files: File paths relative to a collection (or upstream path) with their identities.
@@ -76,11 +79,7 @@ def group_by_skill(files: Iterable[tuple[str, str]]) -> SkillTrees:
     Returns:
         Skills keyed by their directory, each with its files relative to that directory.
     """
-    visible = [
-        (PurePosixPath(p), s)
-        for p, s in files
-        if not any(part.startswith(".") for part in PurePosixPath(p).parts)
-    ]
+    visible = [(PurePosixPath(p), s) for p, s in files if _visible(p)]
     skills = {p.parent for p, _ in visible if p.name == "SKILL.md" and p.parent.parts}
     trees: SkillTrees = {str(skill): {} for skill in skills}
     for path, identity in visible:
@@ -90,16 +89,43 @@ def group_by_skill(files: Iterable[tuple[str, str]]) -> SkillTrees:
     return trees
 
 
+def _visible(path: str) -> bool:
+    return not any(is_ignored(part) for part in PurePosixPath(path).parts)
+
+
+def directory_files(directory: Path) -> list[tuple[str, str]]:
+    """List files under a directory outside the catalog repository with their git identity.
+
+    Args:
+        directory: Any directory, e.g. the origin of an imported skill.
+
+    Returns:
+        `(path relative to directory, "<mode> <blob sha>")` pairs, symlinks not followed.
+    """
+    found = []
+    for path in sorted(directory.rglob("*")):
+        relative = path.relative_to(directory).as_posix()
+        if path.is_symlink():
+            found.append((relative, f"120000 {git_blob_sha(os.readlink(path).encode())}"))
+        elif path.is_file():
+            found.append((relative, f"{_mode(path)} {git_blob_sha(path.read_bytes())}"))
+    return found
+
+
 @dataclass(frozen=True)
 class CollectionReport:
     """The outcome of checking one collection against its upstream."""
 
     collection: str
-    status: Literal["checked", "unavailable", "skipped", "no-upstream"]
+    status: Literal["checked", "unavailable", "no-upstream"]
     upstream: str | None = None
     commit: str | None = None
     reason: str | None = None
     skills: tuple[SkillChange, ...] = ()
+
+
+class OriginMissingError(SkillctlError):
+    """A local upstream directory doesn't exist on this machine."""
 
 
 class WorkingTree:
@@ -166,11 +192,12 @@ def _mode(path: Path) -> str:
 
 
 class UpstreamChecker:
-    """Compares catalog collections in a working tree with their GitHub upstreams. Read-only."""
+    """Compares catalog collections and imported skills with where they came from. Read-only."""
 
-    def __init__(self, github: GitHubClient, sources: SourcesFile) -> None:
+    def __init__(self, github: GitHubClient, sources: SourcesFile, home: Path) -> None:
         self._github = github
         self._sources = sources
+        self._home = home
         self._tree = WorkingTree(sources.root)
 
     def check(self, only: str | None = None) -> list[CollectionReport]:
@@ -191,25 +218,56 @@ class UpstreamChecker:
         if only is not None and only not in collections:
             raise SourcesError(f"No collection '{only}' in {self._sources.path}")
         names = [only] if only else sorted(collections)
-        return [self._check(name, collections[name].upstream) for name in names]
+        return [self._check(name, collections[name]) for name in names]
 
-    def _check(self, name: str, upstream: Upstream | None) -> CollectionReport:
+    def _check(self, name: str, collection: Collection) -> CollectionReport:
+        imported = tuple(
+            self._compare_with_origin(name, skill, origin)
+            for skill, origin in sorted(collection.skills.items())
+        )
+        upstream = collection.upstream
         if upstream is None:
-            return CollectionReport(name, "no-upstream")
-        if not isinstance(upstream, GitHubUpstream):
-            return CollectionReport(
-                name, "skipped", str(upstream), reason="local upstreams are not compared yet"
-            )
+            if not imported:
+                return CollectionReport(name, "no-upstream")
+            return CollectionReport(name, "checked", skills=imported)
+        commit = None
         try:
-            commit = self._github.commit(upstream.github, upstream.ref)
-            remote = self._remote(upstream, commit)
-        except GitHubError as error:
-            return CollectionReport(name, "unavailable", str(upstream), reason=str(error))
+            if isinstance(upstream, GitHubUpstream):
+                commit = self._github.commit(upstream.github, upstream.ref)
+                remote = self._github_skills(upstream, commit)
+            else:
+                remote = group_by_skill(directory_files(self._existing(upstream)))
+        except (GitHubError, OriginMissingError) as error:
+            return CollectionReport(
+                name, "unavailable", str(upstream), reason=str(error), skills=imported
+            )
         local = group_by_skill(self._tree.files(self._sources.root / "skills" / name))
-        changes = tuple(plan(local=local, upstream=remote))
-        return CollectionReport(name, "checked", str(upstream), commit, skills=changes)
+        for skill in collection.skills:
+            local.pop(skill, None)
+            remote.pop(skill, None)
+        changes = sorted((*plan(local=local, upstream=remote), *imported), key=lambda c: c.skill)
+        return CollectionReport(name, "checked", str(upstream), commit, skills=tuple(changes))
 
-    def _remote(self, upstream: GitHubUpstream, commit: str) -> SkillTrees:
+    def _compare_with_origin(self, name: str, skill: str, origin: LocalUpstream) -> SkillChange:
+        try:
+            source = self._existing(origin)
+        except OriginMissingError as error:
+            return SkillChange(skill, "unavailable", reason=str(error))
+        # Both sides raw: import and sync copy origin bytes verbatim, so git's eol filters
+        # must not make a fresh copy look modified.
+        here = directory_files(self._sources.root / "skills" / name / skill)
+        there = directory_files(source)
+        local = {skill: {p: i for p, i in here if _visible(p)}}
+        upstream = {skill: {p: i for p, i in there if _visible(p)}}
+        return plan(local=local, upstream=upstream)[0]
+
+    def _existing(self, origin: LocalUpstream) -> Path:
+        directory = origin.resolve(self._home)
+        if not directory.is_dir():
+            raise OriginMissingError(f"{origin} not found on this machine")
+        return directory
+
+    def _github_skills(self, upstream: GitHubUpstream, commit: str) -> SkillTrees:
         prefix = f"{upstream.path}/" if upstream.path else ""
         entries = self._github.tree(upstream.github, commit)
         return group_by_skill(
