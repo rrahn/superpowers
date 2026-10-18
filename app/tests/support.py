@@ -21,6 +21,7 @@ class FakeGitHub:
     ref: str = "main"
     requests: list[httpx.Request] = field(default_factory=list)
     fail: bool = False
+    unreadable: set[str] = field(default_factory=set)
 
     def _tree(self) -> dict[str, object]:
         dirs = {p.rsplit("/", i)[0] for p in self.files for i in range(1, p.count("/") + 1)}
@@ -38,7 +39,7 @@ class FakeGitHub:
         prefix = f"/{self.repo}/{self.ref}/"
         if url.host == "raw.githubusercontent.com" and url.path.startswith(prefix):
             path = url.path.removeprefix(prefix)
-            if path in self.files:
+            if path in self.files and path not in self.unreadable:
                 return httpx.Response(200, text=self.files[path])
         return httpx.Response(404, json={"message": "Not Found"})
 

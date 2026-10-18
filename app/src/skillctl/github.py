@@ -55,6 +55,19 @@ class GitHubClient:
         Returns:
             The file's text content.
         """
+        return self.read_bytes(repo, ref, path).decode()
+
+    def read_bytes(self, repo: str, ref: str, path: str) -> bytes:
+        """Read one file without decoding, for scripts and images as well as text.
+
+        Args:
+            repo: Repository as `owner/name`.
+            ref: Branch, tag, or commit.
+            path: File path relative to the repository root.
+
+        Returns:
+            The file's raw content.
+        """
         response = self._http.get(f"{RAW}/{repo}/{ref}/{path}")
         response.raise_for_status()
-        return response.text
+        return response.content

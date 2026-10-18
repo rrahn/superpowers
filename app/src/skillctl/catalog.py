@@ -2,6 +2,8 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from difflib import get_close_matches
+from functools import cached_property
 from pathlib import PurePosixPath
 
 import yaml
@@ -20,6 +22,16 @@ class CatalogSkill:
     collection: str
     description: str
     path: str
+    tree_sha: str
+
+
+class SkillNotFoundError(Exception):
+    """No catalog skill has the requested name."""
+
+    def __init__(self, name: str, suggestions: list[str]) -> None:
+        super().__init__(f"No skill named '{name}' in the catalog")
+        self.name = name
+        self.suggestions = suggestions
 
 
 @dataclass(frozen=True)
@@ -54,11 +66,27 @@ class CatalogQuery:
 
 
 class Catalog:
-    """Discovers skills in the catalog repository through GitHub."""
+    """Discovers and reads skills in the catalog repository through GitHub.
+
+    One instance reads the repository tree once and reuses it for every call.
+    """
 
     def __init__(self, github: GitHubClient, where: CatalogRef) -> None:
         self._github = github
         self._where = where
+
+    @property
+    def where(self) -> CatalogRef:
+        """The repository and ref this catalog reads."""
+        return self._where
+
+    @cached_property
+    def _entries(self) -> list[TreeEntry]:
+        return self._github.tree(self._where.repo, self._where.ref)
+
+    @cached_property
+    def _tree_shas(self) -> dict[str, str]:
+        return {e.path: e.sha for e in self._entries if e.type == "tree"}
 
     def skills(self, query: CatalogQuery | None = None) -> list[CatalogSkill]:
         """List catalog skills.
@@ -70,13 +98,46 @@ class Catalog:
             Matching skills sorted by collection, then name.
         """
         query = query or CatalogQuery()
-        entries = self._github.tree(self._where.repo, self._where.ref)
-        candidates = [e for e in entries if _is_skill_file(e)]
+        candidates = [e for e in self._entries if _is_skill_file(e)]
         with ThreadPoolExecutor(max_workers=16) as pool:
             texts = pool.map(self._read, (e.path for e in candidates))
-            found = [_parse(e.path, text) for e, text in zip(candidates, texts, strict=True)]
+            found = [self._parse(e.path, text) for e, text in zip(candidates, texts, strict=True)]
         return sorted(
             (s for s in found if s and query.matches(s)), key=lambda s: (s.collection, s.name)
+        )
+
+    def find(self, name: str) -> CatalogSkill:
+        """Look up one skill by name, reading only its `SKILL.md`.
+
+        Args:
+            name: The skill name.
+
+        Returns:
+            The matching skill.
+
+        Raises:
+            SkillNotFoundError: No valid skill has that name; carries close matches.
+        """
+        for entry in self._entries:
+            if _is_skill_file(entry) and PurePosixPath(entry.path).parent.name == name:
+                skill = self._parse(entry.path, self._read(entry.path))
+                if skill:
+                    return skill
+        raise SkillNotFoundError(name, get_close_matches(name, sorted(self.names()), n=3))
+
+    def files(self, skill: CatalogSkill) -> list[str]:
+        """List every file of `skill`, relative to its directory."""
+        prefix = f"{skill.path}/"
+        return sorted(
+            e.path.removeprefix(prefix)
+            for e in self._entries
+            if e.type == "blob" and e.path.startswith(prefix)
+        )
+
+    def read(self, skill: CatalogSkill, relative_path: str) -> bytes:
+        """Download one file of `skill`."""
+        return self._github.read_bytes(
+            self._where.repo, self._where.ref, f"{skill.path}/{relative_path}"
         )
 
     def _read(self, path: str) -> str:
@@ -88,8 +149,20 @@ class Catalog:
         Returns:
             Directory names of every `SKILL.md` under `skills/`.
         """
-        entries = self._github.tree(self._where.repo, self._where.ref)
-        return {PurePosixPath(e.path).parent.name for e in entries if _is_skill_file(e)}
+        return {PurePosixPath(e.path).parent.name for e in self._entries if _is_skill_file(e)}
+
+    def _parse(self, path: str, text: str) -> CatalogSkill | None:
+        directory = PurePosixPath(path).parent
+        meta = _frontmatter(text)
+        if meta.get("name") != directory.name:
+            return None
+        return CatalogSkill(
+            name=directory.name,
+            collection=directory.parts[1],
+            description=" ".join(str(meta.get("description", "")).split()),
+            path=str(directory),
+            tree_sha=self._tree_shas.get(str(directory), ""),
+        )
 
 
 def _is_skill_file(entry: TreeEntry) -> bool:
@@ -99,19 +172,6 @@ def _is_skill_file(entry: TreeEntry) -> bool:
         and len(parts) >= 3
         and parts[0] == SKILLS_ROOT
         and parts[-1] == SKILL_FILE
-    )
-
-
-def _parse(path: str, text: str) -> CatalogSkill | None:
-    directory = PurePosixPath(path).parent
-    meta = _frontmatter(text)
-    if meta.get("name") != directory.name:
-        return None
-    return CatalogSkill(
-        name=directory.name,
-        collection=directory.parts[1],
-        description=" ".join(str(meta.get("description", "")).split()),
-        path=str(directory),
     )
 
 

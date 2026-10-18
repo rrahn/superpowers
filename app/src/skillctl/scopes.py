@@ -54,6 +54,21 @@ class Lockfile:
             raise LockfileError(f"{self.path} is not a valid lockfile")
         return skills
 
+    def record(self, name: str, entry: dict[str, object]) -> None:
+        """Add or replace the entry for `name`, writing the file atomically.
+
+        Args:
+            name: Skill name.
+            entry: Where the installation came from.
+
+        Raises:
+            LockfileError: The existing lockfile is malformed.
+        """
+        skills = {**self.entries(), name: entry}
+        staged = self.path.with_suffix(".tmp")
+        staged.write_text(json.dumps({"version": 1, "skills": skills}, indent=2, sort_keys=True))
+        staged.replace(self.path)
+
 
 @dataclass(frozen=True)
 class Scope:
