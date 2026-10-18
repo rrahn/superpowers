@@ -1,14 +1,18 @@
-"""Test doubles at system boundaries: a fake GitHub served through httpx.MockTransport."""
+"""Test support: a fake GitHub behind httpx.MockTransport and a CLI runner wired to it."""
 
+import io
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from hashlib import sha1
+from pathlib import Path
 from typing import Any
 
 import httpx
 from rich.console import Console
-from typer.testing import Result
+from typer.testing import CliRunner, Result
 
+from skillctl.cli import Dependencies, create_app
 from skillctl.github import GitHubClient
 
 
@@ -86,3 +90,23 @@ class Run:
 
     def json(self) -> Any:
         return json.loads(self.text)
+
+
+def make_runner(github: FakeGitHub, home: Path, cwd: Path) -> Callable[..., Run]:
+    """Build a CLI invoker against the fake GitHub, recording output on a fixed-width console."""
+
+    def _run(*args: str) -> Run:
+        console = Console(
+            file=io.StringIO(),
+            width=100,
+            record=True,
+            force_terminal=True,
+            color_system="truecolor",
+        )
+        deps = Dependencies(github=github.client(), console=console, home=home, cwd=cwd)
+        result = CliRunner().invoke(create_app(deps), list(args))
+        if result.exception and not isinstance(result.exception, SystemExit):
+            raise result.exception
+        return Run(result, console)
+
+    return _run

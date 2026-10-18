@@ -115,9 +115,18 @@ def create_app(deps: Dependencies) -> typer.Typer:
         force: Annotated[
             bool, typer.Option("--force", "-f", help="Replace an existing installation.")
         ] = False,
+        scope_name: Annotated[
+            ScopeName,
+            typer.Option(
+                "--scope", help="global: ~/.copilot/skills; local: <repo>/.github/skills."
+            ),
+        ] = ScopeName.GLOBAL,
     ) -> None:
-        """Install a catalog skill into the global scope (~/.copilot/skills)."""
-        scope = Scopes(deps.home, deps.cwd).global_scope
+        """Install a catalog skill globally or into the current repository."""
+        try:
+            scope = Scopes(deps.home, deps.cwd).get(scope_name)
+        except NotInRepositoryError as error:
+            _fail(f"{error}. Use --scope global or run inside one.")
         try:
             skill = Installer(Catalog(deps.github, deps.catalog_ref)).install(
                 name, scope, force=force
