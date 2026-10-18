@@ -36,7 +36,9 @@ _Avoid_: origin (overloaded with the git remote), provider.
 
 **Sources file**: the TOML file in the catalog repository declaring every upstream source.
 
-**Provenance**: the record of which upstream source (and path, commit) a skill in the catalog was copied from.
+**Provenance**: the record of which upstream source a single skill in the catalog was copied from,
+written by `upstream import` as `[collections.<c>.skills.<skill>] local = "…"`. It overrides the
+collection's upstream for that skill.
 
 **Change set**: the difference between a skill in the catalog and its upstream source, as file-level
 changes: **added**, **modified**, **deleted**. A skill whose upstream no longer exists is

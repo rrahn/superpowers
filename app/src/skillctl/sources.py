@@ -1,11 +1,12 @@
-"""Upstream sources: where each collection in the catalog repository comes from."""
+"""Upstream sources: where each collection, and each imported skill, comes from."""
 
 import shutil
 import tempfile
 import tomllib
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 import tomlkit
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, ValidationError
@@ -44,7 +45,10 @@ class GitHubUpstream(_Strict):
 
 
 class LocalUpstream(_Strict):
-    """A directory on this machine, e.g. a clone of a private repository."""
+    """A directory on this machine, e.g. a clone of a private repository.
+
+    `~` is kept as written in the file and expanded against the user's home when read.
+    """
 
     local: str
 
@@ -52,6 +56,19 @@ class LocalUpstream(_Strict):
     def kind(self) -> Literal["local"]:
         """Discriminator shown to users."""
         return "local"
+
+    def resolve(self, home: Path) -> Path:
+        """The directory this upstream points at, with a leading `~` expanded to `home`."""
+        if self.local == "~" or self.local.startswith("~/"):
+            return home / self.local.removeprefix("~").lstrip("/")
+        return Path(self.local)
+
+    @classmethod
+    def of(cls, directory: Path, home: Path) -> "LocalUpstream":
+        """Point at `directory`, written relative to `~` when it lives under `home`."""
+        if directory.is_relative_to(home):
+            return cls(local=f"~/{directory.relative_to(home).as_posix()}")
+        return cls(local=directory.as_posix())
 
     def __str__(self) -> str:
         return self.local
@@ -77,6 +94,10 @@ class Collection(_Strict):
 
     upstream: Upstream | None = None
     note: str | None = None
+    skills: dict[str, LocalUpstream] = Field(
+        default_factory=dict,
+        description="Provenance of individually imported skills, keyed by path in the collection.",
+    )
 
 
 class Sources(_Strict):
@@ -131,7 +152,7 @@ class SourcesFile:
         return self._validate(data)
 
     def add_github_upstream(
-        self, github: GitHubClient, collection: str, upstream: "GitHubUpstream", *, force: bool
+        self, github: GitHubClient, collection: str, upstream: GitHubUpstream, *, force: bool
     ) -> int:
         """Verify `upstream` on GitHub, then record it for `collection`.
 
@@ -159,24 +180,34 @@ class SourcesFile:
                 "Use --force to replace it."
             )
         found = _verify(github, upstream)
-        self._write(self._with_upstream(collection, upstream))
+        self._edit(collection, lambda table: _set_upstream(table, upstream))
         return found
 
-    def _with_upstream(self, collection: str, upstream: "GitHubUpstream") -> str:
+    def record_provenance(self, collection: str, skill: str, origin: LocalUpstream) -> None:
+        """Record that `skill` in `collection` was imported from `origin`.
+
+        Args:
+            collection: Collection name; declared when missing.
+            skill: Skill path inside the collection.
+            origin: Where the skill was copied from.
+
+        Raises:
+            SourcesError: The file is invalid or can't be edited.
+        """
+        self._edit(collection, lambda table: _set_provenance(table, skill, origin))
+
+    def _edit(self, collection: str, change: Callable[[Any], None]) -> None:
         document = tomlkit.parse(self._read())
         try:
             collections = document.setdefault("collections", tomlkit.table(is_super_table=True))
-            table = collections.setdefault(collection, tomlkit.table())
-            entry = tomlkit.inline_table()
-            entry.update(upstream.model_dump())
-            table["upstream"] = entry
+            change(collections.setdefault(collection, tomlkit.table()))
         except (ValueError, TypeError, AttributeError) as error:
             raise SourcesError(
                 f"Cannot edit {self.path}: declare collections as [collections.<name>] tables"
             ) from error
         text = tomlkit.dumps(document)
         self._validate(tomllib.loads(text))
-        return text
+        self._write(text)
 
     def _read(self) -> str:
         try:
@@ -236,6 +267,19 @@ class SourcesFile:
             )
             for name, collection in sorted(self.load().collections.items())
         ]
+
+
+def _set_upstream(table: Any, upstream: GitHubUpstream) -> None:
+    entry = tomlkit.inline_table()
+    entry.update(upstream.model_dump())
+    table["upstream"] = entry
+
+
+def _set_provenance(table: Any, skill: str, origin: LocalUpstream) -> None:
+    skills = table.setdefault("skills", tomlkit.table(is_super_table=True))
+    entry = tomlkit.table()
+    entry["local"] = origin.local
+    skills[skill] = entry
 
 
 @dataclass(frozen=True)
