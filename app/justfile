@@ -1,0 +1,43 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+# List recipes
+default:
+    @just --list
+
+# Create/refresh the dev environment and install git hooks
+setup:
+    uv sync
+    cd .. && uv run --project app pre-commit install --allow-missing-config
+
+# Run the test suite (extra args go to pytest)
+test *args:
+    uv run pytest {{ args }}
+
+# Regenerate snapshots after an intended output change
+snapshots:
+    uv run pytest --snapshot-update
+
+# Lint and check formatting
+lint:
+    uv run ruff check .
+    uv run ruff format --check .
+
+# Auto-fix lint and formatting
+fmt:
+    uv run ruff check --fix .
+    uv run ruff format .
+
+# Type-check the sources
+typecheck:
+    uv run ty check src tests
+
+# Everything CI runs
+check: lint typecheck test
+
+# Install the skillctl command on this machine
+install:
+    uv tool install --force --reinstall .
+
+# Remove the installed skillctl command
+uninstall:
+    uv tool uninstall skillctl

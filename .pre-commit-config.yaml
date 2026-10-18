@@ -1,0 +1,28 @@
+# Hooks run from the repo root; they only fire for changes under app/.
+repos:
+  - repo: local
+    hooks:
+      - id: skillctl-ruff-format
+        name: ruff format (skillctl)
+        entry: bash -c 'cd app && uv run ruff format .'
+        language: system
+        pass_filenames: false
+        files: ^app/
+      - id: skillctl-ruff-check
+        name: ruff check (skillctl)
+        entry: bash -c 'cd app && uv run ruff check --fix .'
+        language: system
+        pass_filenames: false
+        files: ^app/
+      - id: skillctl-ty
+        name: ty (skillctl)
+        entry: bash -c 'cd app && uv run ty check src tests'
+        language: system
+        pass_filenames: false
+        files: ^app/
+      - id: skillctl-pytest
+        name: pytest (skillctl)
+        entry: bash -c 'cd app && uv run pytest -q'
+        language: system
+        pass_filenames: false
+        files: ^app/
