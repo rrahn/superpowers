@@ -82,6 +82,15 @@ class Catalog:
     def _read(self, path: str) -> str:
         return self._github.read_text(self._where.repo, self._where.ref, path)
 
+    def names(self) -> set[str]:
+        """Cheaply list skill names from the tree alone, without reading any `SKILL.md`.
+
+        Returns:
+            Directory names of every `SKILL.md` under `skills/`.
+        """
+        entries = self._github.tree(self._where.repo, self._where.ref)
+        return {PurePosixPath(e.path).parent.name for e in entries if _is_skill_file(e)}
+
 
 def _is_skill_file(entry: TreeEntry) -> bool:
     parts = PurePosixPath(entry.path).parts

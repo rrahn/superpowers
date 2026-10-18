@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [ ] `skillctl --version` and `skillctl --help` work via `uv run` and after `just install`
 - [ ] Tests exercise the CLI seam through `create_app(deps)`

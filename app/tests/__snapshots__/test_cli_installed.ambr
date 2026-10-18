@@ -1,0 +1,16 @@
+# serializer version: 1
+# name: test_installed_table
+  '''
+  Installed skills                                                                                    
+  ┏━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+  ┃ Skill         ┃ Scope  ┃ Status    ┃ In catalog ┃ Link                                           ┃
+  ┡━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+  │ brainstorming │ global │ unmanaged │     ✓      │ ~/clone/brainstorming                          │
+  │ my-own        │ global │ unmanaged │     ✗      │                                                │
+  │ tdd           │ global │ managed   │     ✓      │                                                │
+  │ grill-me      │ local  │ managed   │     ✓      │                                                │
+  └───────────────┴────────┴───────────┴────────────┴────────────────────────────────────────────────┘
+                                        4 installed · 2 managed                                       
+  
+  '''
+# ---
