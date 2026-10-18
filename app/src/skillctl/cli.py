@@ -3,15 +3,16 @@
 from dataclasses import dataclass, field
 from importlib.metadata import version
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, NoReturn
 
 import httpx
 import typer
 from rich.console import Console
 
 from skillctl import views
-from skillctl.catalog import Catalog, CatalogQuery, CatalogRef
+from skillctl.catalog import Catalog, CatalogQuery, CatalogRef, SkillNotFoundError
 from skillctl.github import GitHubClient
+from skillctl.installer import AlreadyInstalledError, DownloadError, Installer
 from skillctl.scopes import LockfileError, NotInRepositoryError, ScopeName, Scopes
 
 
@@ -107,6 +108,36 @@ def create_app(deps: Dependencies) -> typer.Typer:
             deps.console.print(
                 "[dim]Not inside a git repository: local scope (.github/skills) not shown.[/]"
             )
+
+    @app.command()
+    def install(
+        name: Annotated[str, typer.Argument(help="Catalog skill name.")],
+        force: Annotated[
+            bool, typer.Option("--force", "-f", help="Replace an existing installation.")
+        ] = False,
+    ) -> None:
+        """Install a catalog skill into the global scope (~/.copilot/skills)."""
+        scope = Scopes(deps.home, deps.cwd).global_scope
+        try:
+            skill = Installer(Catalog(deps.github, deps.catalog_ref)).install(
+                name, scope, force=force
+            )
+        except SkillNotFoundError as error:
+            hint = f" Did you mean: {', '.join(error.suggestions)}?" if error.suggestions else ""
+            _fail(f"{error}.{hint}")
+        except AlreadyInstalledError as error:
+            _fail(f"{error}. Use --force to replace it.")
+        except (DownloadError, LockfileError) as error:
+            _fail(str(error))
+        except httpx.HTTPError as error:
+            _fail(f"Could not reach GitHub ({error}).")
+        deps.console.print(
+            f"[green]Installed[/] [bold]{skill.name}[/] from {skill.path} into {scope.root}"
+        )
+
+    def _fail(message: str) -> NoReturn:
+        deps.console.print(f"[red]Error:[/] {message}")
+        raise typer.Exit(1)
 
     return app
 

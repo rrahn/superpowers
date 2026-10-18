@@ -1,7 +1,8 @@
 """Scopes: where Copilot reads installed skills from, and what is installed there."""
 
 import json
-from dataclasses import dataclass
+import tempfile
+from dataclasses import asdict, dataclass
 from enum import StrEnum
 from pathlib import Path
 
@@ -30,6 +31,17 @@ class LockfileError(Exception):
 
 
 @dataclass(frozen=True)
+class LockEntry:
+    """Where a managed installation came from (ADR-0002)."""
+
+    repo: str
+    ref: str
+    commit: str
+    path: str
+    tree_sha: str
+
+
+@dataclass(frozen=True)
 class Lockfile:
     """`.skillctl-lock.json`: the managed installations of one scope (ADR-0002)."""
 
@@ -53,6 +65,25 @@ class Lockfile:
         if not isinstance(skills, dict):
             raise LockfileError(f"{self.path} is not a valid lockfile")
         return skills
+
+    def record(self, name: str, entry: LockEntry) -> None:
+        """Add or replace the entry for `name`, writing the file atomically.
+
+        Args:
+            name: Skill name.
+            entry: Where the installation came from.
+
+        Raises:
+            LockfileError: The existing lockfile is malformed.
+        """
+        skills = {**self.entries(), name: asdict(entry)}
+        content = json.dumps({"version": 1, "skills": skills}, indent=2, sort_keys=True)
+        with tempfile.NamedTemporaryFile(
+            "w", dir=self.path.parent, prefix=".lock-", delete=False
+        ) as staged:
+            staged.write(content)
+        Path(staged.name).chmod(0o644)
+        Path(staged.name).replace(self.path)
 
 
 @dataclass(frozen=True)

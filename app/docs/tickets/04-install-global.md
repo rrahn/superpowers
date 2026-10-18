@@ -4,9 +4,9 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] All files of the skill directory copied (nested files included)
-- [ ] Refuses to overwrite an existing installation without `--force`
-- [ ] Unknown name fails with close-match suggestions
-- [ ] A failed download leaves no partial directory and no lockfile entry
+- [x] All files of the skill directory copied (nested files included)
+- [x] Refuses to overwrite an existing installation without `--force`
+- [x] Unknown name fails with close-match suggestions
+- [x] A failed download leaves no partial directory and no lockfile entry
