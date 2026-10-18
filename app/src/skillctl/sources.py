@@ -1,14 +1,18 @@
 """Upstream sources: where each collection in the catalog repository comes from."""
 
+import shutil
+import tempfile
 import tomllib
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Annotated, Literal
 
+import tomlkit
 from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, ValidationError
 
 from skillctl.catalog import skill_name
 from skillctl.errors import SkillctlError
+from skillctl.github import GitHubClient
 from skillctl.scopes import repository_root
 
 SOURCES_FILE = Path("skills") / "sources.toml"
@@ -121,11 +125,83 @@ class SourcesFile:
                 names the offending key.
         """
         try:
-            data = tomllib.loads(self.path.read_text(encoding="utf-8"))
-        except OSError as error:
-            raise SourcesError(f"Cannot read {self.path}: {error.strerror}") from error
+            data = tomllib.loads(self._read())
         except (tomllib.TOMLDecodeError, UnicodeDecodeError) as error:
             raise SourcesError(f"{self.path} is not valid TOML: {error}") from error
+        return self._validate(data)
+
+    def add_github_upstream(
+        self, github: GitHubClient, collection: str, upstream: "GitHubUpstream", *, force: bool
+    ) -> int:
+        """Verify `upstream` on GitHub, then record it for `collection`.
+
+        Conflicts are checked before any network call, and the file is written only after the
+        upstream verified. Comments, ordering, and line endings of the file are kept.
+
+        Args:
+            github: Client used to verify the upstream.
+            collection: Collection name; created when not declared yet.
+            upstream: The upstream to record.
+            force: Replace an upstream the collection already has.
+
+        Returns:
+            How many `SKILL.md` files live under the upstream path.
+
+        Raises:
+            SourcesError: The collection already has an upstream and `force` is False, the path
+                doesn't exist upstream, or the file is invalid or can't be edited.
+            GitHubError: The repository or ref doesn't exist, or GitHub is unreachable.
+        """
+        current = self.load().collections.get(collection)
+        if current and current.upstream and not force:
+            raise SourcesError(
+                f"{collection} already has an upstream ({current.upstream}). "
+                "Use --force to replace it."
+            )
+        found = _verify(github, upstream)
+        self._write(self._with_upstream(collection, upstream))
+        return found
+
+    def _with_upstream(self, collection: str, upstream: "GitHubUpstream") -> str:
+        document = tomlkit.parse(self._read())
+        try:
+            collections = document.setdefault("collections", tomlkit.table(is_super_table=True))
+            table = collections.setdefault(collection, tomlkit.table())
+            entry = tomlkit.inline_table()
+            entry.update(upstream.model_dump())
+            table["upstream"] = entry
+        except (ValueError, TypeError, AttributeError) as error:
+            raise SourcesError(
+                f"Cannot edit {self.path}: declare collections as [collections.<name>] tables"
+            ) from error
+        text = tomlkit.dumps(document)
+        self._validate(tomllib.loads(text))
+        return text
+
+    def _read(self) -> str:
+        try:
+            with self.path.open(encoding="utf-8", newline="") as handle:
+                return handle.read()
+        except OSError as error:
+            raise SourcesError(f"Cannot read {self.path}: {error.strerror}") from error
+
+    def _write(self, text: str) -> None:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            newline="",
+            dir=self.path.parent,
+            prefix=".sources-",
+            delete=False,
+        ) as staged:
+            staged.write(text)
+        try:
+            shutil.copymode(self.path, staged.name)
+            Path(staged.name).replace(self.path.resolve())
+        finally:
+            Path(staged.name).unlink(missing_ok=True)
+
+    def _validate(self, data: object) -> Sources:
         try:
             return Sources.model_validate(data)
         except ValidationError as error:
@@ -171,3 +247,53 @@ class CollectionOverview:
     upstream: str | None
     skills: int
     note: str | None
+
+
+def github_upstream(repo: str, ref: str, path: str) -> GitHubUpstream:
+    """Build a GitHub upstream from user input.
+
+    Args:
+        repo: Repository as `owner/name`.
+        ref: Branch, tag, or commit.
+        path: Directory holding the skills; `.` or empty means the repository root.
+
+    Returns:
+        The upstream with a normalised path (`./skills/` becomes `skills`).
+
+    Raises:
+        SourcesError: `repo` isn't `owner/name`.
+    """
+    cleaned = PurePosixPath(path.strip()).as_posix()
+    try:
+        return GitHubUpstream(
+            github=repo.strip(), ref=ref.strip(), path="" if cleaned == "." else cleaned
+        )
+    except ValidationError as error:
+        raise SourcesError(f"GitHub repository must be owner/name, got {repo!r}") from error
+
+
+def _verify(github: GitHubClient, upstream: GitHubUpstream) -> int:
+    """Check that the upstream's repository, ref, and path exist on GitHub.
+
+    Args:
+        github: Client used to read the upstream.
+        upstream: The upstream to check.
+
+    Returns:
+        How many `SKILL.md` files live under the upstream path.
+
+    Raises:
+        GitHubError: The repository or ref doesn't exist, or GitHub is unreachable.
+        SourcesError: The path isn't a directory in the repository.
+    """
+    commit = github.commit(upstream.github, upstream.ref)
+    entries = github.tree(upstream.github, commit)
+    path = upstream.path
+    if path and not any(e.type == "tree" and e.path == path for e in entries):
+        raise SourcesError(f"{upstream.github}@{upstream.ref} has no directory {path}")
+    prefix = f"{path}/" if path else ""
+    return sum(
+        1
+        for e in entries
+        if e.type == "blob" and e.path.startswith(prefix) and e.path.endswith("/SKILL.md")
+    )
