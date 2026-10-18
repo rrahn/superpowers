@@ -2,6 +2,8 @@
 
 import io
 import json
+import os
+import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from hashlib import sha1
@@ -125,3 +127,16 @@ def make_runner(github: FakeGitHub, home: Path, cwd: Path) -> Callable[..., Run]
         return Run(result, console)
 
     return _run
+
+
+def write_files(root: Path, files: dict[str, str | bytes]) -> None:
+    """Create `files` (relative path → content) under `root`."""
+    for path, content in files.items():
+        (root / path).parent.mkdir(parents=True, exist_ok=True)
+        (root / path).write_bytes(content if isinstance(content, bytes) else content.encode())
+
+
+def git_init(path: Path) -> None:
+    """Make `path` a real git repository, immune to GIT_* variables set by git hooks."""
+    clean_env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    subprocess.run(["git", "init", "-q", str(path)], check=True, env=clean_env)  # noqa: S603, S607
