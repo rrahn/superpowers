@@ -164,6 +164,21 @@ class Scopes:
         candidates = [self.global_scope, local]
         return [s for s in candidates if s and (name is None or s.name is name)]
 
+    def get(self, name: ScopeName) -> Scope:
+        """Resolve exactly one scope.
+
+        Args:
+            name: The scope to resolve.
+
+        Returns:
+            The scope.
+
+        Raises:
+            NotInRepositoryError: `name` is local and cwd isn't inside a git repository.
+        """
+        (scope,) = self.select(name)
+        return scope
+
 
 def _repository_root(start: Path) -> Path | None:
     return next((d for d in (start, *start.parents) if (d / ".git").exists()), None)

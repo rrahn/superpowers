@@ -32,9 +32,22 @@ def test_install_local_from_a_subdirectory_targets_the_repository_root(
     nested = repo / "src" / "pkg"
     nested.mkdir(parents=True)
 
-    make_runner(github, home, nested)("install", "tdd", "--scope", "local")
+    out = make_runner(github, home, nested)("install", "tdd", "--scope", "local")
 
+    assert out.result.exit_code == 0
     assert (repo / ".github" / "skills" / "tdd" / "SKILL.md").is_file()
+
+
+def test_install_local_in_a_git_worktree_whose_git_entry_is_a_file(
+    github: FakeGitHub, home: Path, cwd: Path
+) -> None:
+    (cwd / ".git").write_text("gitdir: /elsewhere/.git/worktrees/x\n")
+    github.files = {f"{TDD}/SKILL.md": skill_md("tdd", "Test-driven development.")}
+
+    out = make_runner(github, home, cwd)("install", "tdd", "--scope", "local")
+
+    assert out.result.exit_code == 0
+    assert (cwd / ".github" / "skills" / "tdd" / "SKILL.md").is_file()
 
 
 def test_install_local_outside_a_repository_fails_and_writes_nothing(

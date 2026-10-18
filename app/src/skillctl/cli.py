@@ -124,9 +124,9 @@ def create_app(deps: Dependencies) -> typer.Typer:
     ) -> None:
         """Install a catalog skill globally or into the current repository."""
         try:
-            (scope,) = Scopes(deps.home, deps.cwd).select(scope_name)
+            scope = Scopes(deps.home, deps.cwd).get(scope_name)
         except NotInRepositoryError as error:
-            _fail(f"{error}; use --scope global or run inside a repository.")
+            _fail(f"{error}. Use --scope global or run inside one.")
         try:
             skill = Installer(Catalog(deps.github, deps.catalog_ref)).install(
                 name, scope, force=force

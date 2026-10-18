@@ -1,4 +1,4 @@
-"""Test doubles at system boundaries: a fake GitHub served through httpx.MockTransport."""
+"""Test support: a fake GitHub behind httpx.MockTransport and a CLI runner wired to it."""
 
 import io
 import json
