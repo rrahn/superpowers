@@ -1,6 +1,7 @@
 """Adapter for the GitHub REST API and raw content host — the only module that speaks HTTP."""
 
 from dataclasses import dataclass
+from typing import Literal
 
 import httpx
 
@@ -10,10 +11,10 @@ RAW = "https://raw.githubusercontent.com"
 
 @dataclass(frozen=True)
 class TreeEntry:
-    """One path in a git tree: a directory (`tree`) or a file (`blob`)."""
+    """One path in a git tree: a directory, a file, or a submodule."""
 
     path: str
-    type: str
+    type: Literal["tree", "blob", "commit"]
     sha: str
 
 
@@ -44,7 +45,16 @@ class GitHubClient:
         ]
 
     def read_text(self, repo: str, ref: str, path: str) -> str:
-        """Return the text content of `path` in `repo` at `ref`."""
+        """Read one file.
+
+        Args:
+            repo: Repository as `owner/name`.
+            ref: Branch, tag, or commit.
+            path: File path relative to the repository root.
+
+        Returns:
+            The file's text content.
+        """
         response = self._http.get(f"{RAW}/{repo}/{ref}/{path}")
         response.raise_for_status()
         return response.text

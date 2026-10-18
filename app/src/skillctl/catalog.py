@@ -20,7 +20,6 @@ class CatalogSkill:
     collection: str
     description: str
     path: str
-    tree_sha: str
 
 
 @dataclass(frozen=True)
@@ -39,7 +38,15 @@ class CatalogQuery:
     search: str | None = None
 
     def matches(self, skill: CatalogSkill) -> bool:
-        """Whether `skill` passes every filter that is set."""
+        """Check `skill` against every filter that is set.
+
+        Args:
+            skill: The catalog skill to test.
+
+        Returns:
+            True if the skill is in the collection (when set) and its name or description
+            contains the search term (when set).
+        """
         if self.collection and skill.collection != self.collection:
             return False
         needle = (self.search or "").casefold()
@@ -54,17 +61,20 @@ class Catalog:
         self._where = where
 
     def skills(self, query: CatalogQuery | None = None) -> list[CatalogSkill]:
-        """Return every valid skill matching `query`, sorted by collection then name."""
+        """List catalog skills.
+
+        Args:
+            query: Optional filters; all skills when omitted.
+
+        Returns:
+            Matching skills sorted by collection, then name.
+        """
         query = query or CatalogQuery()
         entries = self._github.tree(self._where.repo, self._where.ref)
-        tree_shas = {e.path: e.sha for e in entries if e.type == "tree"}
         candidates = [e for e in entries if _is_skill_file(e)]
         with ThreadPoolExecutor(max_workers=16) as pool:
             texts = pool.map(self._read, (e.path for e in candidates))
-            found = [
-                _parse(entry.path, text, tree_shas)
-                for entry, text in zip(candidates, texts, strict=True)
-            ]
+            found = [_parse(e.path, text) for e, text in zip(candidates, texts, strict=True)]
         return sorted(
             (s for s in found if s and query.matches(s)), key=lambda s: (s.collection, s.name)
         )
@@ -83,7 +93,7 @@ def _is_skill_file(entry: TreeEntry) -> bool:
     )
 
 
-def _parse(path: str, text: str, tree_shas: dict[str, str]) -> CatalogSkill | None:
+def _parse(path: str, text: str) -> CatalogSkill | None:
     directory = PurePosixPath(path).parent
     meta = _frontmatter(text)
     if meta.get("name") != directory.name:
@@ -93,16 +103,18 @@ def _parse(path: str, text: str, tree_shas: dict[str, str]) -> CatalogSkill | No
         collection=directory.parts[1],
         description=" ".join(str(meta.get("description", "")).split()),
         path=str(directory),
-        tree_sha=tree_shas.get(str(directory), ""),
     )
 
 
 def _frontmatter(text: str) -> dict[str, object]:
-    if not text.startswith("---"):
+    lines = text.lstrip("\ufeff").splitlines()
+    if not lines or lines[0].strip() != "---":
         return {}
-    _, block, *_ = [*text.split("---", 2), ""]
+    closing = next((i for i, line in enumerate(lines[1:], 1) if line.strip() == "---"), None)
+    if closing is None:
+        return {}
     try:
-        meta = yaml.safe_load(block)
+        meta = yaml.safe_load("\n".join(lines[1:closing]))
     except yaml.YAMLError:
         return {}
     return meta if isinstance(meta, dict) else {}

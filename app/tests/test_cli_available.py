@@ -62,6 +62,31 @@ def test_available_search_matches_name_or_description_case_insensitively(
     assert names(run("available", "--search", "ideas", "--json")) == ["brainstorming"]
 
 
+def test_available_combines_collection_and_search(
+    github: FakeGitHub, run: Callable[..., Run]
+) -> None:
+    seed(github)
+
+    out = run("available", "--collection", "superpowers", "--search", "tdd", "--json")
+
+    assert names(out) == []
+
+
+def test_available_reads_descriptions_containing_dashes_and_folded_lines(
+    github: FakeGitHub, run: Callable[..., Run]
+) -> None:
+    github.files = {
+        "skills/misc/caveman/SKILL.md": (
+            "---\nname: caveman\ndescription: >\n  Talk short --- like caveman.\n"
+            "  Save tokens.\n---\n\nBody with --- rule.\n"
+        )
+    }
+
+    out = run("available", "--json")
+
+    assert out.json()[0]["description"] == "Talk short --- like caveman. Save tokens."
+
+
 def test_available_json_lists_skill_objects(github: FakeGitHub, run: Callable[..., Run]) -> None:
     seed(github)
 
