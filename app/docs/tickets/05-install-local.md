@@ -4,8 +4,8 @@
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Works from any subdirectory of the repository
-- [ ] Clear error outside a git repository, nothing written
-- [ ] `installed` shows the skill as managed in the local scope
+- [x] Works from any subdirectory of the repository
+- [x] Clear error outside a git repository, nothing written
+- [x] `installed` shows the skill as managed in the local scope
