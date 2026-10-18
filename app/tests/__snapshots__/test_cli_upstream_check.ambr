@@ -2,18 +2,22 @@
 # name: test_check_report
   '''
   Upstream check (dry run)                                                                            
-  ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-  ┃ Collection ┃ Skill              ┃ Status      ┃ Would change                                     ┃
-  ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-  │ gone       │ —                  │ unavailable │ someone/deleted-repo@main not found. If it is    │
-  │            │                    │             │ private, set GITHUB_TOKEN (or GH_TOKEN).         │
-  │ mattpocock │ engineering/tdd    │ changed     │ + mocking.md                                     │
-  │            │                    │             │ ~ tests.md                                       │
-  │            │                    │             │ - legacy.md                                      │
-  │ mattpocock │ engineering/triage │ new         │ + SKILL.md                                       │
-  │ mattpocock │ misc/local-only    │ orphaned    │ kept — no longer upstream                        │
-  │ misc       │ —                  │ no upstream │                                                  │
-  └────────────┴────────────────────┴─────────────┴──────────────────────────────────────────────────┘
+  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+  ┃ Skill                                    ┃ Status      ┃ Would change                            ┃
+  ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+  │ gone someone/deleted-repo@main:skills    │ unavailable │ someone/deleted-repo@main not found. If │
+  │                                          │             │ it is private, set GITHUB_TOKEN (or     │
+  │                                          │             │ GH_TOKEN).                              │
+  ├──────────────────────────────────────────┼─────────────┼─────────────────────────────────────────┤
+  │ mattpocock mattpocock/skills@main:skills │             │ @ c0ffee000000                          │
+  │   engineering/tdd                        │ changed     │ + mocking.md                            │
+  │                                          │             │ ~ tests.md                              │
+  │                                          │             │ - legacy.md                             │
+  │   engineering/triage                     │ new         │ + SKILL.md                              │
+  │   misc/local-only                        │ orphaned    │ kept — no longer upstream               │
+  ├──────────────────────────────────────────┼─────────────┼─────────────────────────────────────────┤
+  │ misc                                     │ no upstream │                                         │
+  └──────────────────────────────────────────┴─────────────┴─────────────────────────────────────────┘
                               1 changed · 1 new · 1 orphaned · 1 unchanged                            
   
   '''

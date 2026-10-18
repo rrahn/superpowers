@@ -1,4 +1,24 @@
-from skillctl.upstream import SkillChange, plan
+from skillctl.upstream import SkillChange, group_by_skill, plan
+
+
+def test_files_belong_to_the_deepest_skill_directory() -> None:
+    files = [
+        ("tdd/SKILL.md", "1"),
+        ("tdd/tests.md", "2"),
+        ("tdd/examples/demo/SKILL.md", "3"),
+        ("tdd/examples/demo/run.sh", "4"),
+    ]
+
+    assert group_by_skill(files) == {
+        "tdd": {"SKILL.md": "1", "tests.md": "2"},
+        "tdd/examples/demo": {"SKILL.md": "3", "run.sh": "4"},
+    }
+
+
+def test_root_skill_md_hidden_files_and_loose_files_are_ignored() -> None:
+    files = [("SKILL.md", "1"), ("README.md", "2"), ("x/SKILL.md", "3"), ("x/.DS_Store", "4")]
+
+    assert group_by_skill(files) == {"x": {"SKILL.md": "3"}}
 
 
 def test_identical_skills_are_unchanged() -> None:

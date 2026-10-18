@@ -1,16 +1,19 @@
 """Comparing catalog collections with their upstream sources."""
 
-from collections.abc import Iterable, Iterator
+import os
+import stat
+import subprocess
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from hashlib import sha1
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Literal
 
 from skillctl.github import GitHubClient, GitHubError
 from skillctl.sources import GitHubUpstream, SourcesError, SourcesFile, Upstream
 
 FileTree = dict[str, str]
-"""File path (relative to the skill) → git blob SHA."""
+"""File path (relative to the skill) → git identity `"<mode> <blob sha>"`."""
 
 SkillTrees = dict[str, FileTree]
 """Skill path (relative to the collection / upstream path) → its files."""
@@ -62,30 +65,28 @@ def git_blob_sha(content: bytes) -> str:
 
 
 def group_by_skill(files: Iterable[tuple[str, str]]) -> SkillTrees:
-    """Group `(path, sha)` pairs under the deepest directory that holds a `SKILL.md`.
+    """Group `(path, identity)` pairs under the deepest directory that holds a `SKILL.md`.
 
     Hidden files and directories are ignored on both sides of a comparison, and a `SKILL.md` at
     the root itself is not a skill.
 
     Args:
-        files: File paths relative to a collection (or upstream path) with their blob SHAs.
+        files: File paths relative to a collection (or upstream path) with their identities.
 
     Returns:
         Skills keyed by their directory, each with its files relative to that directory.
     """
     visible = [
-        (p, s) for p, s in files if not any(part.startswith(".") for part in PurePosixPath(p).parts)
+        (PurePosixPath(p), s)
+        for p, s in files
+        if not any(part.startswith(".") for part in PurePosixPath(p).parts)
     ]
-    skills = {
-        str(PurePosixPath(p).parent)
-        for p, _ in visible
-        if PurePosixPath(p).name == "SKILL.md" and "/" in p
-    }
-    trees: SkillTrees = {skill: {} for skill in skills}
-    for path, sha in visible:
-        owner = max((s for s in skills if path.startswith(f"{s}/")), key=len, default=None)
+    skills = {p.parent for p, _ in visible if p.name == "SKILL.md" and p.parent.parts}
+    trees: SkillTrees = {str(skill): {} for skill in skills}
+    for path, identity in visible:
+        owner = next((d for d in path.parents if d in skills), None)
         if owner is not None:
-            trees[owner][path.removeprefix(f"{owner}/")] = sha
+            trees[str(owner)][path.relative_to(owner).as_posix()] = identity
     return trees
 
 
@@ -94,10 +95,74 @@ class CollectionReport:
     """The outcome of checking one collection against its upstream."""
 
     collection: str
-    status: Literal["checked", "unavailable", "no upstream"]
+    status: Literal["checked", "unavailable", "skipped", "no-upstream"]
     upstream: str | None = None
+    commit: str | None = None
     reason: str | None = None
     skills: tuple[SkillChange, ...] = ()
+
+
+class WorkingTree:
+    """Reads files of the catalog repository the way git sees them.
+
+    Only tracked and untracked-but-not-ignored files count, and content is hashed through git's
+    clean filters, so line-ending conversion and `.gitignore` don't show up as changes.
+    """
+
+    def __init__(self, root: Path) -> None:
+        self._root = root
+
+    def files(self, directory: Path) -> list[tuple[str, str]]:
+        """List files under `directory` with their git identity.
+
+        Args:
+            directory: A directory inside the repository.
+
+        Returns:
+            `(path relative to directory, "<mode> <blob sha>")` pairs.
+
+        Raises:
+            SourcesError: git isn't available or the directory isn't in a git repository.
+        """
+        listed = self._git(
+            "ls-files",
+            "-z",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "--",
+            directory.relative_to(self._root).as_posix(),
+        )
+        paths = sorted({p for p in listed.split("\0") if p and os.path.lexists(self._root / p)})
+        links = [p for p in paths if (self._root / p).is_symlink()]
+        regular = [p for p in paths if p not in links]
+        shas = self._git("hash-object", "--stdin-paths", stdin="\n".join(regular)).split()
+        identities = {
+            p: f"{_mode(self._root / p)} {sha}" for p, sha in zip(regular, shas, strict=True)
+        }
+        for p in links:
+            identities[p] = f"120000 {git_blob_sha(os.readlink(self._root / p).encode())}"
+        prefix = directory.relative_to(self._root).as_posix() + "/"
+        return [(p.removeprefix(prefix), identities[p]) for p in paths]
+
+    def _git(self, *args: str, stdin: str | None = None) -> str:
+        # GIT_DIR & co. leak in from git hooks and would redirect git to another repository.
+        env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+        try:
+            return subprocess.run(  # noqa: S603
+                ["git", "-C", str(self._root), *args],  # noqa: S607
+                input=stdin,
+                capture_output=True,
+                text=True,
+                check=True,
+                env=env,
+            ).stdout
+        except (OSError, subprocess.CalledProcessError) as error:
+            raise SourcesError(f"git failed in {self._root}: {error}") from error
+
+
+def _mode(path: Path) -> str:
+    return "100755" if path.stat().st_mode & stat.S_IXUSR else "100644"
 
 
 class UpstreamChecker:
@@ -106,6 +171,7 @@ class UpstreamChecker:
     def __init__(self, github: GitHubClient, sources: SourcesFile) -> None:
         self._github = github
         self._sources = sources
+        self._tree = WorkingTree(sources.root)
 
     def check(self, only: str | None = None) -> list[CollectionReport]:
         """Check every collection, or just `only`.
@@ -118,7 +184,8 @@ class UpstreamChecker:
             raised.
 
         Raises:
-            SourcesError: The sources file is invalid or `only` isn't declared in it.
+            SourcesError: The sources file is invalid, `only` isn't declared in it, or git
+                can't read the working tree.
         """
         collections = self._sources.load().collections
         if only is not None and only not in collections:
@@ -128,32 +195,25 @@ class UpstreamChecker:
 
     def _check(self, name: str, upstream: Upstream | None) -> CollectionReport:
         if upstream is None:
-            return CollectionReport(name, "no upstream")
+            return CollectionReport(name, "no-upstream")
         if not isinstance(upstream, GitHubUpstream):
             return CollectionReport(
-                name, "unavailable", str(upstream), "local upstreams are not compared yet"
+                name, "skipped", str(upstream), reason="local upstreams are not compared yet"
             )
         try:
-            remote = self._remote(upstream)
+            commit = self._github.commit(upstream.github, upstream.ref)
+            remote = self._remote(upstream, commit)
         except GitHubError as error:
-            return CollectionReport(name, "unavailable", str(upstream), str(error))
-        local = group_by_skill(self._local_files(name))
-        return CollectionReport(
-            name, "checked", str(upstream), skills=tuple(plan(local=local, upstream=remote))
-        )
+            return CollectionReport(name, "unavailable", str(upstream), reason=str(error))
+        local = group_by_skill(self._tree.files(self._sources.root / "skills" / name))
+        changes = tuple(plan(local=local, upstream=remote))
+        return CollectionReport(name, "checked", str(upstream), commit, skills=changes)
 
-    def _remote(self, upstream: GitHubUpstream) -> SkillTrees:
-        commit = self._github.commit(upstream.github, upstream.ref)
+    def _remote(self, upstream: GitHubUpstream, commit: str) -> SkillTrees:
         prefix = f"{upstream.path}/" if upstream.path else ""
         entries = self._github.tree(upstream.github, commit)
         return group_by_skill(
-            (e.path.removeprefix(prefix), e.sha)
+            (e.path.removeprefix(prefix), f"{e.mode} {e.sha}")
             for e in entries
             if e.type == "blob" and e.path.startswith(prefix)
         )
-
-    def _local_files(self, collection: str) -> Iterator[tuple[str, str]]:
-        root = self._sources.root / "skills" / collection
-        for path in sorted(root.rglob("*")):
-            if path.is_file():
-                yield path.relative_to(root).as_posix(), git_blob_sha(path.read_bytes())

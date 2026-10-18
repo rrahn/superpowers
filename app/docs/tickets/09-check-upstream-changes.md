@@ -4,9 +4,9 @@
 
 **Blocked by:** 07
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Pure change-set planner tested with literal file trees
-- [ ] Orphaned skills flagged, not scheduled for deletion
-- [ ] One unreachable source does not abort the check
-- [ ] Summary table + per-skill detail snapshot
+- [x] Pure change-set planner tested with literal file trees
+- [x] Orphaned skills flagged, not scheduled for deletion
+- [x] One unreachable source does not abort the check
+- [x] Summary table + per-skill detail snapshot

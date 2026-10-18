@@ -1,3 +1,5 @@
+import os
+import subprocess
 from collections.abc import Callable
 from pathlib import Path
 
@@ -26,13 +28,14 @@ TDD = skill_md("tdd", "Test-driven development.")
 def write(root: Path, files: dict[str, str]) -> None:
     for path, content in files.items():
         (root / path).parent.mkdir(parents=True, exist_ok=True)
-        (root / path).write_text(content)
+        (root / path).write_bytes(content.encode())
 
 
 @pytest.fixture
 def catalog_repo(cwd: Path, github: FakeGitHub) -> Path:
     """This repo's mattpocock collection has drifted from its upstream in every way."""
-    (cwd / ".git").mkdir()
+    clean_env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    subprocess.run(["git", "init", "-q", str(cwd)], check=True, env=clean_env)  # noqa: S603, S607
     write(
         cwd / "skills",
         {
@@ -60,6 +63,61 @@ def catalog_repo(cwd: Path, github: FakeGitHub) -> Path:
 def by_skill(out: Run) -> dict[str, dict[str, object]]:
     report = {c["collection"]: c for c in out.json()}
     return {s["skill"]: s for s in report["mattpocock"]["skills"]}
+
+
+GRILL = "mattpocock/engineering/grill-me"
+
+
+def test_line_endings_converted_by_git_attributes_are_not_changes(
+    catalog_repo: Path, run: Callable[..., Run]
+) -> None:
+    (catalog_repo / ".gitattributes").write_text("*.md text eol=crlf\n")
+    skill_md_path = catalog_repo / "skills" / GRILL / "SKILL.md"
+    skill_md_path.write_bytes(skill_md_path.read_bytes().replace(b"\n", b"\r\n"))
+
+    assert by_skill(run("upstream", "check", "--json"))["engineering/grill-me"]["status"] == (
+        "unchanged"
+    )
+
+
+def test_an_executable_bit_change_is_a_modification(
+    catalog_repo: Path, github: FakeGitHub, run: Callable[..., Run]
+) -> None:
+    github.executables = {"skills/engineering/grill-me/SKILL.md"}
+
+    skill = by_skill(run("upstream", "check", "--json"))["engineering/grill-me"]
+
+    assert skill["modified"] == ["SKILL.md"]
+
+
+def test_git_ignored_files_are_not_reported_as_deleted(
+    catalog_repo: Path, run: Callable[..., Run]
+) -> None:
+    (catalog_repo / ".gitignore").write_text("__pycache__/\n")
+    write(catalog_repo / "skills" / GRILL, {"__pycache__/x.cpython-312.pyc": "bytecode"})
+
+    skill = by_skill(run("upstream", "check", "--json"))["engineering/grill-me"]
+
+    assert skill["status"] == "unchanged"
+
+
+def test_report_records_the_upstream_commit_it_compared_against(
+    catalog_repo: Path, github: FakeGitHub, run: Callable[..., Run]
+) -> None:
+    report = {c["collection"]: c for c in run("upstream", "check", "--json").json()}
+
+    assert report["mattpocock"]["commit"] == github.commit
+
+
+def test_local_upstreams_are_skipped_not_unavailable(
+    catalog_repo: Path, run: Callable[..., Run]
+) -> None:
+    sources = catalog_repo / "skills" / "sources.toml"
+    sources.write_text(SOURCES + '\n[collections.private]\nupstream = { local = "/nowhere" }\n')
+
+    report = {c["collection"]: c for c in run("upstream", "check", "--json").json()}
+
+    assert report["private"]["status"] == "skipped"
 
 
 def test_check_reports_file_level_changes(catalog_repo: Path, run: Callable[..., Run]) -> None:
@@ -112,7 +170,7 @@ def test_collections_without_upstream_are_skipped(
 ) -> None:
     report = {c["collection"]: c for c in run("upstream", "check", "--json").json()}
 
-    assert report["misc"]["status"] == "no upstream"
+    assert report["misc"]["status"] == "no-upstream"
 
 
 def test_check_can_be_limited_to_one_collection(

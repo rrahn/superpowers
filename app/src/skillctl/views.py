@@ -15,7 +15,8 @@ _STATUS_STYLE = {
     "new": "[green]new[/]",
     "orphaned": "[magenta]orphaned[/]",
     "unavailable": "[red]unavailable[/]",
-    "no upstream": "[dim]no upstream[/]",
+    "skipped": "[dim]skipped[/]",
+    "no-upstream": "[dim]no upstream[/]",
 }
 
 
@@ -26,13 +27,14 @@ def upstream_json(reports: list[CollectionReport]) -> list[dict[str, object]]:
         reports: Collection reports to convert.
 
     Returns:
-        One object per collection with its skills' change sets.
+        One object per collection with the compared commit and its skills' change sets.
     """
     return [
         {
             "collection": r.collection,
             "status": r.status,
             "upstream": r.upstream,
+            "commit": r.commit,
             "reason": r.reason,
             "skills": [
                 {
@@ -50,32 +52,34 @@ def upstream_json(reports: list[CollectionReport]) -> list[dict[str, object]]:
 
 
 def upstream_table(reports: list[CollectionReport]) -> Table:
-    """Tabulate what a sync would change; unchanged skills are counted, not listed.
+    """Tabulate what a sync would change, one section per collection.
+
+    Unchanged skills are counted in the caption, not listed.
 
     Args:
         reports: Collection reports to show, in order.
 
     Returns:
-        A table with one row per changed/new/orphaned skill and per collection that wasn't
-        compared, with file-level detail.
+        A table with a heading row per collection and one row per changed, new, or orphaned
+        skill with file-level detail.
     """
     table = Table(title="Upstream check (dry run)", title_justify="left", expand=True)
-    table.add_column("Collection", style="bold magenta", no_wrap=True)
-    table.add_column("Skill", style="bold cyan", no_wrap=True)
+    table.add_column("Skill", style="cyan", overflow="fold", ratio=1)
     table.add_column("Status", no_wrap=True)
-    table.add_column("Would change", ratio=1, overflow="fold")
+    table.add_column("Would change", overflow="fold", ratio=1)
     counts = dict.fromkeys(("changed", "new", "orphaned", "unchanged"), 0)
     for report in reports:
+        heading = f"[bold magenta]{report.collection}[/] [dim]{report.upstream or ''}[/]"
         if report.status != "checked":
             reason = f"[dim]{report.reason or ''}[/]"
-            table.add_row(report.collection, "—", _STATUS_STYLE[report.status], reason)
+            table.add_row(heading, _STATUS_STYLE[report.status], reason, end_section=True)
             continue
+        table.add_row(heading, "", f"[dim]@ {(report.commit or '')[:12]}[/]")
         for skill in report.skills:
             counts[skill.status] += 1
             if skill.status != "unchanged":
-                table.add_row(
-                    report.collection, skill.skill, _STATUS_STYLE[skill.status], _changes(skill)
-                )
+                table.add_row(f"  {skill.skill}", _STATUS_STYLE[skill.status], _changes(skill))
+        table.add_section()
     table.caption = " · ".join(f"{n} {status}" for status, n in counts.items())
     return table
 
