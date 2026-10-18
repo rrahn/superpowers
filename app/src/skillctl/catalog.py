@@ -31,6 +31,21 @@ class CatalogRef:
     ref: str = "main"
 
 
+@dataclass(frozen=True)
+class CatalogQuery:
+    """Narrows the catalog by collection and a case-insensitive search term."""
+
+    collection: str | None = None
+    search: str | None = None
+
+    def matches(self, skill: CatalogSkill) -> bool:
+        """Whether `skill` passes every filter that is set."""
+        if self.collection and skill.collection != self.collection:
+            return False
+        needle = (self.search or "").casefold()
+        return needle in skill.name.casefold() or needle in skill.description.casefold()
+
+
 class Catalog:
     """Discovers skills in the catalog repository through GitHub."""
 
@@ -38,8 +53,9 @@ class Catalog:
         self._github = github
         self._where = where
 
-    def skills(self) -> list[CatalogSkill]:
-        """Return every valid skill, sorted by collection then name."""
+    def skills(self, query: CatalogQuery | None = None) -> list[CatalogSkill]:
+        """Return every valid skill matching `query`, sorted by collection then name."""
+        query = query or CatalogQuery()
         entries = self._github.tree(self._where.repo, self._where.ref)
         tree_shas = {e.path: e.sha for e in entries if e.type == "tree"}
         candidates = [e for e in entries if _is_skill_file(e)]
@@ -49,7 +65,9 @@ class Catalog:
                 _parse(entry.path, text, tree_shas)
                 for entry, text in zip(candidates, texts, strict=True)
             ]
-        return sorted((s for s in found if s), key=lambda s: (s.collection, s.name))
+        return sorted(
+            (s for s in found if s and query.matches(s)), key=lambda s: (s.collection, s.name)
+        )
 
     def _read(self, path: str) -> str:
         return self._github.read_text(self._where.repo, self._where.ref, path)

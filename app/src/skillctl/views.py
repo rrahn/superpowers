@@ -5,6 +5,14 @@ from rich.table import Table
 from skillctl.catalog import CatalogSkill
 
 
+def catalog_json(skills: list[CatalogSkill]) -> list[dict[str, str]]:
+    """Stable JSON shape for catalog skills."""
+    return [
+        {"name": s.name, "collection": s.collection, "description": s.description, "path": s.path}
+        for s in skills
+    ]
+
+
 def catalog_table(skills: list[CatalogSkill], source: str) -> Table:
     """Tabulate catalog skills grouped by collection."""
     table = Table(title=f"Available skills · {source}", title_justify="left", expand=True)

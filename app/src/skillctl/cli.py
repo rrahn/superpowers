@@ -9,7 +9,7 @@ import typer
 from rich.console import Console
 
 from skillctl import views
-from skillctl.catalog import Catalog, CatalogRef
+from skillctl.catalog import Catalog, CatalogQuery, CatalogRef
 from skillctl.github import GitHubClient
 
 
@@ -59,11 +59,22 @@ def create_app(deps: Dependencies) -> typer.Typer:
         """Manage GitHub Copilot skills curated in the superpowers repository."""
 
     @app.command()
-    def available() -> None:
+    def available(
+        collection: Annotated[
+            str | None, typer.Option("--collection", "-c", help="Only this collection.")
+        ] = None,
+        search: Annotated[
+            str | None, typer.Option("--search", "-s", help="Match name or description.")
+        ] = None,
+        as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+    ) -> None:
         """List skills installable from the catalog repository."""
         where = deps.catalog_ref
-        skills = Catalog(deps.github, where).skills()
-        deps.console.print(views.catalog_table(skills, f"{where.repo}@{where.ref}"))
+        skills = Catalog(deps.github, where).skills(CatalogQuery(collection, search))
+        if as_json:
+            deps.console.print_json(data=views.catalog_json(skills))
+        else:
+            deps.console.print(views.catalog_table(skills, f"{where.repo}@{where.ref}"))
 
     return app
 

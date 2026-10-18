@@ -3,6 +3,7 @@
 import json
 from dataclasses import dataclass, field
 from hashlib import sha1
+from typing import Any
 
 import httpx
 from rich.console import Console
@@ -64,5 +65,5 @@ class Run:
     def svg(self, title: str) -> str:
         return self.console.export_svg(title=title, clear=False)
 
-    def json(self) -> object:
+    def json(self) -> Any:
         return json.loads(self.text)

@@ -39,3 +39,45 @@ def test_available_skips_skill_md_whose_name_does_not_match_its_directory(
 
     assert "brainstorming" in out.text
     assert "python-uv" not in out.text
+
+
+def names(out: Run) -> list[str]:
+    return [row["name"] for row in out.json()]
+
+
+def test_available_filters_by_collection(github: FakeGitHub, run: Callable[..., Run]) -> None:
+    seed(github)
+
+    out = run("available", "--collection", "superpowers", "--json")
+
+    assert names(out) == ["brainstorming"]
+
+
+def test_available_search_matches_name_or_description_case_insensitively(
+    github: FakeGitHub, run: Callable[..., Run]
+) -> None:
+    seed(github)
+
+    assert names(run("available", "--search", "TDD", "--json")) == ["tdd"]
+    assert names(run("available", "--search", "ideas", "--json")) == ["brainstorming"]
+
+
+def test_available_json_lists_skill_objects(github: FakeGitHub, run: Callable[..., Run]) -> None:
+    seed(github)
+
+    out = run("available", "--json")
+
+    assert out.json() == [
+        {
+            "name": "tdd",
+            "collection": "mattpocock",
+            "description": "Test-driven development.",
+            "path": "skills/mattpocock/engineering/tdd",
+        },
+        {
+            "name": "brainstorming",
+            "collection": "superpowers",
+            "description": "Turn ideas into designs.",
+            "path": "skills/superpowers/brainstorming",
+        },
+    ]
