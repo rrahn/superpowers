@@ -4,17 +4,17 @@ import shutil
 import tempfile
 from pathlib import Path
 
-import httpx
-
 from skillctl.catalog import Catalog, CatalogSkill
+from skillctl.errors import SkillctlError
+from skillctl.github import GitHubError
 from skillctl.scopes import LockEntry, Scope
 
 
-class AlreadyInstalledError(Exception):
+class AlreadyInstalledError(SkillctlError):
     """The scope already has an installation with that name."""
 
 
-class DownloadError(Exception):
+class DownloadError(SkillctlError):
     """A file of the skill couldn't be downloaded or written; nothing was changed."""
 
 
@@ -44,12 +44,14 @@ class Installer:
             AlreadyInstalledError: `name` exists in the scope and `force` is False.
             DownloadError: A file couldn't be downloaded.
             LockfileError: The scope's lockfile is malformed.
-            httpx.HTTPError: GitHub couldn't be reached.
+            GitHubError: GitHub couldn't be reached.
         """
         skill = self._catalog.find(name)
         target = scope.root / skill.name
         if _exists(target) and not force:
-            raise AlreadyInstalledError(f"{skill.name} is already installed in {scope.root}")
+            raise AlreadyInstalledError(
+                f"{skill.name} is already installed in {scope.root}. Use --force to replace it."
+            )
         scope.lockfile.entries()  # fail on a malformed lockfile before touching any files
         scope.root.mkdir(parents=True, exist_ok=True)
         staging = Path(tempfile.mkdtemp(prefix=f".{skill.name}-", dir=scope.root))
@@ -73,8 +75,8 @@ class Installer:
                 raise DownloadError(f"Refusing to install {skill.name}: unsafe entry {file.path}")
             try:
                 content = self._catalog.read(skill, file)
-            except httpx.HTTPError as error:
-                raise DownloadError(f"Could not download {skill.name}: {file.path}") from error
+            except GitHubError as error:
+                raise DownloadError(f"Could not download {skill.name}: {error}") from error
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes(content)
             destination.chmod(0o755 if file.executable else 0o644)

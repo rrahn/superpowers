@@ -1,30 +1,30 @@
 """Command-line interface: the composition root wiring dependencies into typer commands."""
 
+import os
+from collections.abc import Generator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from importlib.metadata import version
 from pathlib import Path
-from typing import Annotated, NoReturn
+from typing import Annotated
 
 import httpx
 import typer
 from rich.console import Console
 
 from skillctl import views
-from skillctl.catalog import Catalog, CatalogQuery, CatalogRef, SkillNotFoundError
-from skillctl.github import GitHubClient
-from skillctl.installer import AlreadyInstalledError, DownloadError, Installer
-from skillctl.scopes import LockfileError, NotInRepositoryError, ScopeName, Scopes
-
-
-def _default_github() -> GitHubClient:
-    return GitHubClient(httpx.Client(timeout=30, follow_redirects=True))
+from skillctl.catalog import Catalog, CatalogQuery, CatalogRef
+from skillctl.errors import SkillctlError
+from skillctl.github import GitHubClient, GitHubError, token_from_env
+from skillctl.installer import Installer
+from skillctl.scopes import ScopeName, Scopes
 
 
 @dataclass(frozen=True)
 class Dependencies:
     """Collaborators the commands need; tests pass fakes, `main` passes real ones."""
 
-    github: GitHubClient = field(default_factory=_default_github)
+    github: GitHubClient
     console: Console = field(default_factory=Console)
     catalog_ref: CatalogRef = field(default_factory=CatalogRef)
     home: Path = field(default_factory=Path.home)
@@ -52,8 +52,32 @@ def create_app(deps: Dependencies) -> typer.Typer:
         no_args_is_help=True,
     )
 
+    @contextmanager
+    def reported() -> Generator[None]:
+        """Turn any expected failure into a one-line message and exit code 1."""
+        try:
+            yield
+        except SkillctlError as error:
+            deps.console.print(f"[red]Error:[/] {error}")
+            raise typer.Exit(1) from error
+
+    def catalog(ctx: typer.Context) -> Catalog:
+        return Catalog(deps.github, where(ctx))
+
+    def where(ctx: typer.Context) -> CatalogRef:
+        return ctx.obj
+
     @app.callback()
     def root(
+        ctx: typer.Context,
+        repo: Annotated[
+            str,
+            typer.Option(envvar="SKILLCTL_REPO", help="Catalog repository as owner/name."),
+        ] = deps.catalog_ref.repo,
+        ref: Annotated[
+            str,
+            typer.Option(envvar="SKILLCTL_REF", help="Branch, tag, or commit of the catalog."),
+        ] = deps.catalog_ref.ref,
         _version: Annotated[
             bool,
             typer.Option(
@@ -62,9 +86,11 @@ def create_app(deps: Dependencies) -> typer.Typer:
         ] = False,
     ) -> None:
         """Manage GitHub Copilot skills curated in the superpowers repository."""
+        ctx.obj = CatalogRef(repo, ref)
 
     @app.command()
     def available(
+        ctx: typer.Context,
         collection: Annotated[
             str | None, typer.Option("--collection", "-c", help="Only this collection.")
         ] = None,
@@ -74,15 +100,17 @@ def create_app(deps: Dependencies) -> typer.Typer:
         as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
     ) -> None:
         """List skills installable from the catalog repository."""
-        where = deps.catalog_ref
-        skills = Catalog(deps.github, where).skills(CatalogQuery(collection, search))
+        with reported():
+            skills = catalog(ctx).skills(CatalogQuery(collection, search))
         if as_json:
             deps.console.print_json(data=views.catalog_json(skills))
         else:
-            deps.console.print(views.catalog_table(skills, f"{where.repo}@{where.ref}"))
+            source = where(ctx)
+            deps.console.print(views.catalog_table(skills, f"{source.repo}@{source.ref}"))
 
     @app.command()
     def installed(
+        ctx: typer.Context,
         scope: Annotated[
             ScopeName | None, typer.Option("--scope", help="Only this scope (default: all).")
         ] = None,
@@ -90,16 +118,14 @@ def create_app(deps: Dependencies) -> typer.Typer:
     ) -> None:
         """List skills installed globally and, inside a repository, locally."""
         scopes = Scopes(deps.home, deps.cwd)
+        with reported():
+            found = [i for s in scopes.select(scope) for i in s.installations()]
         try:
-            selected = scopes.select(scope)
-            found = [i for s in selected for i in s.installations()]
-        except (NotInRepositoryError, LockfileError) as error:
-            deps.console.print(f"[red]Error:[/] {error}")
-            raise typer.Exit(1) from error
-        try:
-            catalog_names: set[str] | None = Catalog(deps.github, deps.catalog_ref).names()
-        except httpx.HTTPError:
+            catalog_names: set[str] | None = catalog(ctx).names()
+        except GitHubError as error:
             catalog_names = None
+            if not as_json:
+                deps.console.print(f"[yellow]Warning:[/] catalog membership unknown: {error}")
         if as_json:
             deps.console.print_json(data=views.installed_json(found, catalog_names))
             return
@@ -111,6 +137,7 @@ def create_app(deps: Dependencies) -> typer.Typer:
 
     @app.command()
     def install(
+        ctx: typer.Context,
         name: Annotated[str, typer.Argument(help="Catalog skill name.")],
         force: Annotated[
             bool, typer.Option("--force", "-f", help="Replace an existing installation.")
@@ -123,34 +150,18 @@ def create_app(deps: Dependencies) -> typer.Typer:
         ] = ScopeName.GLOBAL,
     ) -> None:
         """Install a catalog skill globally or into the current repository."""
-        try:
+        with reported():
             scope = Scopes(deps.home, deps.cwd).get(scope_name)
-        except NotInRepositoryError as error:
-            _fail(f"{error}. Use --scope global or run inside one.")
-        try:
-            skill = Installer(Catalog(deps.github, deps.catalog_ref)).install(
-                name, scope, force=force
-            )
-        except SkillNotFoundError as error:
-            hint = f" Did you mean: {', '.join(error.suggestions)}?" if error.suggestions else ""
-            _fail(f"{error}.{hint}")
-        except AlreadyInstalledError as error:
-            _fail(f"{error}. Use --force to replace it.")
-        except (DownloadError, LockfileError) as error:
-            _fail(str(error))
-        except httpx.HTTPError as error:
-            _fail(f"Could not reach GitHub ({error}).")
+            skill = Installer(catalog(ctx)).install(name, scope, force=force)
         deps.console.print(
             f"[green]Installed[/] [bold]{skill.name}[/] from {skill.path} into {scope.root}"
         )
-
-    def _fail(message: str) -> NoReturn:
-        deps.console.print(f"[red]Error:[/] {message}")
-        raise typer.Exit(1)
 
     return app
 
 
 def main() -> None:
-    """Run `skillctl` with real dependencies."""
-    create_app(Dependencies())()
+    """Run `skillctl` with real dependencies, closing the HTTP client on exit."""
+    with httpx.Client(timeout=30, follow_redirects=True) as http:
+        github = GitHubClient(http, token=token_from_env(os.environ))
+        create_app(Dependencies(github=github))()

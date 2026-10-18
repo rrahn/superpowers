@@ -4,11 +4,11 @@
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Repo/ref override works for every catalog command
-- [ ] Token never printed
-- [ ] Rate limit message mentions setting a token
-- [ ] A truncated git tree (huge repos) is reported, not silently listed partially
-- [ ] One failing `SKILL.md` fetch yields an actionable message, not a traceback
-- [ ] The default `httpx.Client` is closed when the command ends
+- [x] Repo/ref override works for every catalog command
+- [x] Token never printed
+- [x] Rate limit message mentions setting a token
+- [x] A truncated git tree (huge repos) is reported, not silently listed partially
+- [x] One failing `SKILL.md` fetch yields an actionable message, not a traceback
+- [x] The default `httpx.Client` is closed when the command ends

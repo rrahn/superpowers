@@ -8,6 +8,7 @@ from pathlib import PurePosixPath
 
 import yaml
 
+from skillctl.errors import SkillctlError
 from skillctl.github import GitHubClient, TreeEntry
 
 SKILLS_ROOT = "skills"
@@ -34,11 +35,12 @@ class SkillFile:
     symlink: bool
 
 
-class SkillNotFoundError(Exception):
+class SkillNotFoundError(SkillctlError):
     """No catalog skill has the requested name."""
 
     def __init__(self, name: str, suggestions: list[str]) -> None:
-        super().__init__(f"No skill named '{name}' in the catalog")
+        hint = f" Did you mean: {', '.join(suggestions)}?" if suggestions else ""
+        super().__init__(f"No skill named '{name}' in the catalog.{hint}")
         self.name = name
         self.suggestions = suggestions
 

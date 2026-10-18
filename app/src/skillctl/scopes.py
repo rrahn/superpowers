@@ -6,6 +6,8 @@ from dataclasses import asdict, dataclass
 from enum import StrEnum
 from pathlib import Path
 
+from skillctl.errors import SkillctlError
+
 LOCKFILE = ".skillctl-lock.json"
 
 
@@ -26,7 +28,7 @@ class Installation:
     link: Path | None
 
 
-class LockfileError(Exception):
+class LockfileError(SkillctlError):
     """A lockfile exists but can't be read."""
 
 
@@ -124,7 +126,7 @@ class Scope:
         return sorted(found, key=lambda i: i.name)
 
 
-class NotInRepositoryError(Exception):
+class NotInRepositoryError(SkillctlError):
     """The local scope was requested outside a git repository."""
 
 
@@ -160,7 +162,9 @@ class Scopes:
         """
         local = self.local_scope
         if name is ScopeName.LOCAL and local is None:
-            raise NotInRepositoryError(f"{self.cwd} is not inside a git repository")
+            raise NotInRepositoryError(
+                f"{self.cwd} is not inside a git repository. Use --scope global or run inside one."
+            )
         candidates = [self.global_scope, local]
         return [s for s in candidates if s and (name is None or s.name is name)]
 
