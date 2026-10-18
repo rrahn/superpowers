@@ -18,7 +18,7 @@ from skillctl.errors import SkillctlError
 from skillctl.github import GitHubClient, GitHubError, token_from_env
 from skillctl.installer import Installer
 from skillctl.scopes import ScopeName, Scopes
-from skillctl.sources import SOURCES_FILE, SourcesFile
+from skillctl.sources import SOURCES_FILE, SourcesFile, github_upstream, verify
 
 
 @dataclass(frozen=True)
@@ -176,6 +176,36 @@ def create_app(deps: Dependencies) -> typer.Typer:
             deps.console.print_json(data=views.sources_json(rows))
         else:
             deps.console.print(views.sources_table(rows, SOURCES_FILE.as_posix()))
+
+    @sources_app.command("add")
+    def sources_add(
+        collection: Annotated[str, typer.Argument(help="Collection under skills/.")],
+        repo: Annotated[
+            str | None, typer.Option("--github", help="Public repository as owner/name.")
+        ] = None,
+        ref: Annotated[str | None, typer.Option(help="Branch, tag, or commit.")] = None,
+        path: Annotated[
+            str | None, typer.Option(help="Directory holding the skills ('' for the root).")
+        ] = None,
+        force: Annotated[
+            bool, typer.Option("--force", "-f", help="Replace an existing upstream.")
+        ] = False,
+    ) -> None:
+        """Add a public GitHub upstream for a collection; prompts for anything not given."""
+        with reported():
+            file = SourcesFile.find(deps.cwd)
+            upstream = github_upstream(
+                repo if repo is not None else typer.prompt("GitHub repository (owner/name)"),
+                ref if ref is not None else typer.prompt("Ref", default="main"),
+                path if path is not None else typer.prompt("Path to skills", default="skills"),
+            )
+            with deps.console.status(f"Checking {upstream} on GitHub…"):
+                found = verify(deps.github, upstream)
+            file.set_upstream(collection, upstream, force=force)
+        deps.console.print(
+            f"[green]Added[/] {collection} ← {upstream} "
+            f"({found} skill{'s' if found != 1 else ''} upstream)"
+        )
 
     return app
 

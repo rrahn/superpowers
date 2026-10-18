@@ -106,7 +106,7 @@ class Run:
 def make_runner(github: FakeGitHub, home: Path, cwd: Path) -> Callable[..., Run]:
     """Build a CLI invoker against the fake GitHub, recording output on a fixed-width console."""
 
-    def _run(*args: str, env: dict[str, str] | None = None) -> Run:
+    def _run(*args: str, env: dict[str, str] | None = None, input: str | None = None) -> Run:
         console = Console(
             file=io.StringIO(),
             width=100,
@@ -116,7 +116,9 @@ def make_runner(github: FakeGitHub, home: Path, cwd: Path) -> Callable[..., Run]
         )
         deps = Dependencies(github=github.client(), console=console, home=home, cwd=cwd)
         hermetic = {"SKILLCTL_REPO": None, "SKILLCTL_REF": None}
-        result = CliRunner().invoke(create_app(deps), list(args), env={**hermetic, **(env or {})})
+        result = CliRunner().invoke(
+            create_app(deps), list(args), env={**hermetic, **(env or {})}, input=input
+        )
         if result.exception and not isinstance(result.exception, SystemExit):
             raise result.exception
         return Run(result, console)
