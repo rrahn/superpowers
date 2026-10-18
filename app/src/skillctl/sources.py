@@ -1,8 +1,10 @@
 """Upstream sources: where each collection in the catalog repository comes from."""
 
+import shutil
+import tempfile
 import tomllib
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Annotated, Literal
 
 import tomlkit
@@ -128,17 +130,27 @@ class SourcesFile:
             raise SourcesError(f"{self.path} is not valid TOML: {error}") from error
         return self._validate(data)
 
-    def set_upstream(self, collection: str, upstream: "GitHubUpstream", *, force: bool) -> None:
-        """Record `upstream` for `collection`, keeping comments and every other entry.
+    def add_github_upstream(
+        self, github: GitHubClient, collection: str, upstream: "GitHubUpstream", *, force: bool
+    ) -> int:
+        """Verify `upstream` on GitHub, then record it for `collection`.
+
+        Conflicts are checked before any network call, and the file is written only after the
+        upstream verified. Comments, ordering, and line endings of the file are kept.
 
         Args:
+            github: Client used to verify the upstream.
             collection: Collection name; created when not declared yet.
             upstream: The upstream to record.
             force: Replace an upstream the collection already has.
 
+        Returns:
+            How many `SKILL.md` files live under the upstream path.
+
         Raises:
-            SourcesError: The collection already has an upstream and `force` is False, or the
-                file is invalid.
+            SourcesError: The collection already has an upstream and `force` is False, the path
+                doesn't exist upstream, or the file is invalid or can't be edited.
+            GitHubError: The repository or ref doesn't exist, or GitHub is unreachable.
         """
         current = self.load().collections.get(collection)
         if current and current.upstream and not force:
@@ -146,22 +158,48 @@ class SourcesFile:
                 f"{collection} already has an upstream ({current.upstream}). "
                 "Use --force to replace it."
             )
+        found = _verify(github, upstream)
+        self._write(self._with_upstream(collection, upstream))
+        return found
+
+    def _with_upstream(self, collection: str, upstream: "GitHubUpstream") -> str:
         document = tomlkit.parse(self._read())
-        collections = document.setdefault("collections", tomlkit.table(is_super_table=True))
-        table = collections.setdefault(collection, tomlkit.table())
-        entry = tomlkit.inline_table()
-        entry.update(upstream.model_dump(exclude_defaults=False))
-        table["upstream"] = entry
-        self._validate(document.unwrap())
-        staged = self.path.with_name(f".{self.path.name}.tmp")
-        staged.write_text(tomlkit.dumps(document), encoding="utf-8")
-        staged.replace(self.path)
+        try:
+            collections = document.setdefault("collections", tomlkit.table(is_super_table=True))
+            table = collections.setdefault(collection, tomlkit.table())
+            entry = tomlkit.inline_table()
+            entry.update(upstream.model_dump())
+            table["upstream"] = entry
+        except (ValueError, TypeError, AttributeError) as error:
+            raise SourcesError(
+                f"Cannot edit {self.path}: declare collections as [collections.<name>] tables"
+            ) from error
+        text = tomlkit.dumps(document)
+        self._validate(tomllib.loads(text))
+        return text
 
     def _read(self) -> str:
         try:
-            return self.path.read_text(encoding="utf-8")
+            with self.path.open(encoding="utf-8", newline="") as handle:
+                return handle.read()
         except OSError as error:
             raise SourcesError(f"Cannot read {self.path}: {error.strerror}") from error
+
+    def _write(self, text: str) -> None:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            newline="",
+            dir=self.path.parent,
+            prefix=".sources-",
+            delete=False,
+        ) as staged:
+            staged.write(text)
+        try:
+            shutil.copymode(self.path, staged.name)
+            Path(staged.name).replace(self.path.resolve())
+        finally:
+            Path(staged.name).unlink(missing_ok=True)
 
     def _validate(self, data: object) -> Sources:
         try:
@@ -214,16 +252,27 @@ class CollectionOverview:
 def github_upstream(repo: str, ref: str, path: str) -> GitHubUpstream:
     """Build a GitHub upstream from user input.
 
+    Args:
+        repo: Repository as `owner/name`.
+        ref: Branch, tag, or commit.
+        path: Directory holding the skills; `.` or empty means the repository root.
+
+    Returns:
+        The upstream with a normalised path (`./skills/` becomes `skills`).
+
     Raises:
         SourcesError: `repo` isn't `owner/name`.
     """
+    cleaned = PurePosixPath(path.strip()).as_posix()
     try:
-        return GitHubUpstream(github=repo, ref=ref, path=path.strip("/"))
+        return GitHubUpstream(
+            github=repo.strip(), ref=ref.strip(), path="" if cleaned == "." else cleaned
+        )
     except ValidationError as error:
         raise SourcesError(f"GitHub repository must be owner/name, got {repo!r}") from error
 
 
-def verify(github: GitHubClient, upstream: GitHubUpstream) -> int:
+def _verify(github: GitHubClient, upstream: GitHubUpstream) -> int:
     """Check that the upstream's repository, ref, and path exist on GitHub.
 
     Args:

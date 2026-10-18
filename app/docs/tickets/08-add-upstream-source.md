@@ -4,8 +4,8 @@
 
 **Blocked by:** 07
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Non-interactive with flags, interactive otherwise
-- [ ] Validation failure writes nothing
-- [ ] Existing formatting/comments of the sources file preserved where possible
+- [x] Non-interactive with flags, interactive otherwise
+- [x] Validation failure writes nothing
+- [x] Existing formatting/comments of the sources file preserved where possible

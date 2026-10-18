@@ -75,6 +75,52 @@ def test_add_prompts_for_missing_values(
     assert upstreams(run)["acme"] == "acme/skills@dev:skills"
 
 
+def test_add_prompt_accepts_dot_for_the_repository_root(
+    catalog_repo: Path, github: FakeGitHub, run: Callable[..., Run]
+) -> None:
+    github.repo = "acme/flat"
+    github.files = {"review/SKILL.md": skill_md("review", "Review.")}
+
+    out = run("sources", "add", "acme", input="acme/flat\nmain\n.\n")
+
+    assert out.result.exit_code == 0
+    assert "1 skill " in out.text
+    assert upstreams(run)["acme"] == "acme/flat@main"
+
+
+@pytest.mark.parametrize("typed", ["./skills/", " skills ", "skills//"])
+def test_add_normalises_the_path(
+    catalog_repo: Path, acme: FakeGitHub, run: Callable[..., Run], typed: str
+) -> None:
+    run("sources", "add", "acme", "--github", "acme/skills", "--ref", "dev", "--path", typed)
+
+    assert upstreams(run)["acme"] == "acme/skills@dev:skills"
+
+
+def test_add_keeps_windows_line_endings(
+    catalog_repo: Path, acme: FakeGitHub, run: Callable[..., Run]
+) -> None:
+    crlf = SOURCES.replace("\n", "\r\n")
+    (catalog_repo / "skills" / "sources.toml").write_bytes(crlf.encode())
+
+    run("sources", "add", "acme", *ACME)
+
+    assert (catalog_repo / "skills" / "sources.toml").read_bytes().startswith(crlf.encode())
+
+
+def test_add_reports_an_unsupported_file_layout_instead_of_crashing(
+    catalog_repo: Path, acme: FakeGitHub, run: Callable[..., Run]
+) -> None:
+    layout = 'version = 1\ncollections = { misc = { note = "x" } }\n'
+    (catalog_repo / "skills" / "sources.toml").write_text(layout)
+
+    out = run("sources", "add", "acme", *ACME)
+
+    assert out.result.exit_code == 1
+    assert "Cannot edit" in out.text
+    assert (catalog_repo / "skills" / "sources.toml").read_text() == layout
+
+
 def test_add_to_a_collection_without_upstream_keeps_its_note(
     catalog_repo: Path, github: FakeGitHub, run: Callable[..., Run]
 ) -> None:
@@ -122,3 +168,16 @@ def test_add_refuses_to_replace_an_upstream_without_force(
     assert refused.result.exit_code == 1
     assert "already has an upstream" in refused.text
     assert replaced.result.exit_code == 0
+    assert sources_text(catalog_repo).count("[collections.mattpocock]") == 1
+
+
+def test_existing_upstream_is_refused_before_contacting_github(
+    catalog_repo: Path, github: FakeGitHub, run: Callable[..., Run]
+) -> None:
+    github.offline = True
+    args = ["--github", "mattpocock/skills", "--ref", "main", "--path", "skills"]
+
+    out = run("sources", "add", "mattpocock", *args)
+
+    assert "already has an upstream" in out.text
+    assert github.requests == []

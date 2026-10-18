@@ -18,7 +18,7 @@ from skillctl.errors import SkillctlError
 from skillctl.github import GitHubClient, GitHubError, token_from_env
 from skillctl.installer import Installer
 from skillctl.scopes import ScopeName, Scopes
-from skillctl.sources import SOURCES_FILE, SourcesFile, github_upstream, verify
+from skillctl.sources import SOURCES_FILE, SourcesFile, github_upstream
 
 
 @dataclass(frozen=True)
@@ -197,11 +197,12 @@ def create_app(deps: Dependencies) -> typer.Typer:
             upstream = github_upstream(
                 repo if repo is not None else typer.prompt("GitHub repository (owner/name)"),
                 ref if ref is not None else typer.prompt("Ref", default="main"),
-                path if path is not None else typer.prompt("Path to skills", default="skills"),
+                path
+                if path is not None
+                else typer.prompt("Path to skills ('.' for the repository root)", default="skills"),
             )
             with deps.console.status(f"Checking {upstream} on GitHub…"):
-                found = verify(deps.github, upstream)
-            file.set_upstream(collection, upstream, force=force)
+                found = file.add_github_upstream(deps.github, collection, upstream, force=force)
         deps.console.print(
             f"[green]Added[/] {collection} ← {upstream} "
             f"({found} skill{'s' if found != 1 else ''} upstream)"
