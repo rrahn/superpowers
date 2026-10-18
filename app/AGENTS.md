@@ -4,7 +4,9 @@ Python CLI that manages Copilot skills from this repository. Read [GLOSSARY.md](
 
 ## Commands (run from `app/`)
 
-- `just setup` — sync the env and install pre-commit hooks
+- `just setup` — sync the env and install pre-commit hooks. Hooks live in the git dir shared by
+  all worktrees; if this env is deleted, re-run `just setup` from another checkout or
+  `uv tool install pre-commit`.
 - `just test` / `just lint` / `just typecheck` / `just check` (everything CI runs)
 - `just snapshots` — regenerate syrupy snapshots after an intended UI change
 - `just install` — install `skillctl` as a uv tool on this machine

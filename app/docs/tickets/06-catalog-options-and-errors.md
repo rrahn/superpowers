@@ -2,7 +2,7 @@
 
 **What to build:** `--repo` / `--ref` (and `SKILLCTL_REPO` / `SKILLCTL_REF`) select another catalog; `GITHUB_TOKEN` / `GH_TOKEN` are sent when set; rate limits, 404s, and network errors render as one-line actionable messages with a non-zero exit code.
 
-**Blocked by:** 02
+**Blocked by:** 04
 
 **Status:** ready-for-agent
 

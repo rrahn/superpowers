@@ -51,8 +51,8 @@ A Python CLI, `skillctl`, in two epics:
 22. As a maintainer, I want to list configured upstream sources in a table, so that I can review them.
 23. As a maintainer, I want to add a public GitHub upstream source interactively or with flags, so that onboarding a new collection is quick.
 24. As a maintainer, I want adding a source to validate the repo/ref/path exists, so that typos fail early.
-25. As a maintainer, I want to import a skill from a local path into a collection, so that it becomes managed with recorded provenance.
-26. As a maintainer, I want to check every managed catalog skill against its upstream source, so that I see what changed upstream.
+25. As a maintainer, I want to import a skill from a local path into a collection, so that it gets recorded provenance.
+26. As a maintainer, I want to check every catalog skill with provenance against its upstream source, so that I see what changed upstream.
 27. As a maintainer, I want the check to show, per skill, added / modified / deleted files and brand-new upstream skills, so that I know exactly what a sync would do.
 28. As a maintainer, I want skills whose upstream disappeared shown as orphaned and never removed, so that curated skills aren't lost.
 29. As a maintainer, I want unreachable upstreams (private repo, missing local path) shown as unavailable rather than failing the whole check, so that one bad source doesn't block the rest.
@@ -74,8 +74,8 @@ A Python CLI, `skillctl`, in two epics:
   - Global options: `--repo OWNER/NAME`, `--ref REF` (env `SKILLCTL_REPO`, `SKILLCTL_REF`).
 - **Modules** (deep modules behind small interfaces; patterns named where they earn their keep):
   - `Catalog` — `skills() -> list[CatalogSkill]`, `files(skill)`. Backed by a `GitHubClient`
-    **adapter** (the only thing that talks HTTP). A local-directory catalog is the second adapter
-    (Epic B, local sources), which is what makes the seam real.
+    **adapter**, the only thing that talks HTTP. Its seam is real because the HTTP transport varies
+    (real network vs. `httpx.MockTransport`); Epic B reuses `GitHubClient` for GitHub upstreams.
   - `Scope` — **strategy** per install location (`GlobalScope`, `LocalScope`) exposing `root`,
     `installations()`, `write(skill, files)`. `ScopeResolver` picks available scopes from cwd/home.
   - `Lockfile` — load/record/entries; owned by a scope.
@@ -108,7 +108,8 @@ A Python CLI, `skillctl`, in two epics:
   request shape, auth header, error mapping (404, 403 rate limit, network error).
 - **Snapshots.** CLI table output is snapshot-tested with syrupy as plain text *and* as SVG
   (rich's `export_svg`). SVG snapshots render in GitHub PR diffs so reviewers see the terminal UI change.
-- Pre-commit runs ruff format, ruff check, ty, and pytest; CI runs the same via `just check`.
+- Pre-commit runs ruff format/fix, ty, and pytest; CI runs the non-mutating equivalents via `just check`.
+- `.python-version` pins 3.12, the lowest supported version, so local and CI test the floor.
 
 ## Out of Scope
 

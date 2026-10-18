@@ -16,7 +16,7 @@ repos:
         files: ^app/
       - id: skillctl-ty
         name: ty (skillctl)
-        entry: bash -c 'cd app && uv run ty check src'
+        entry: bash -c 'cd app && uv run ty check src tests'
         language: system
         pass_filenames: false
         files: ^app/

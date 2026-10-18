@@ -502,7 +502,7 @@ dev = [
     { name = "pytest", specifier = ">=8.2" },
     { name = "ruff", specifier = ">=0.6" },
     { name = "syrupy", specifier = ">=4.6" },
-    { name = "ty", specifier = ">=0.0.1a1" },
+    { name = "ty", specifier = ">=0.0.89,<0.1" },
 ]
 
 [[package]]

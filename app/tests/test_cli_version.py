@@ -8,3 +8,10 @@ def test_version_prints_package_version() -> None:
 
     assert result.exit_code == 0
     assert result.output.strip() == "skillctl 0.1.0"
+
+
+def test_help_describes_the_tool() -> None:
+    result = CliRunner().invoke(create_app(Dependencies()), ["--help"])
+
+    assert result.exit_code == 0
+    assert "Manage GitHub Copilot skills" in result.output

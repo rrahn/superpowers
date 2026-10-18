@@ -29,7 +29,7 @@ fmt:
 
 # Type-check the sources
 typecheck:
-    uv run ty check src
+    uv run ty check src tests
 
 # Everything CI runs
 check: lint typecheck test

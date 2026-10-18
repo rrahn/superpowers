@@ -7,8 +7,8 @@ Domain language for `skillctl`. Use these terms in code, tests, tickets, and PRs
 **Skill**: a directory containing a `SKILL.md` whose frontmatter `name` matches the directory name.
 _Avoid_: plugin, prompt.
 
-**Catalog**: the set of skills installable from the **catalog repository** at its default branch
-(`rrahn/superpowers@main` by default). The default branch is the single source of truth.
+**Catalog**: the set of skills installable from the **catalog repository** at the configured ref
+(default `rrahn/superpowers@main`; `main` is the source of truth, other refs are for testing).
 _Avoid_: registry, store.
 
 **Collection**: the first path segment under `skills/` in the catalog repository
@@ -40,6 +40,7 @@ _Avoid_: origin (overloaded with the git remote), provider.
 
 **Change set**: the difference between a skill in the catalog and its upstream source, as file-level
 changes: **added**, **modified**, **deleted**. A skill whose upstream no longer exists is
-**orphaned**; orphaned skills are never removed automatically.
+**orphaned**; orphaned skills are never removed automatically. A skill whose upstream can't be
+reached (private repository, missing local path) is **unavailable**; nothing is compared or changed.
 
 **Sync**: materialising a change set into the catalog repository working tree.
