@@ -62,6 +62,7 @@ class GitHubClient:
     def __init__(self, http: httpx.Client, token: str | None = None) -> None:
         self._http = http
         self._auth = {"Authorization": f"Bearer {token}"} if token else {}
+        self._has_token = bool(token)
 
     def commit(self, repo: str, ref: str) -> str:
         """Resolve `ref` to the commit SHA it currently points at.
@@ -103,15 +104,22 @@ class GitHubClient:
             params={"recursive": "1"},
             headers={"Accept": "application/vnd.github+json"},
         )
-        body = response.json()
+        body = response.json() if _is_json(response) else None
+        if not isinstance(body, dict) or not isinstance(body.get("tree"), list):
+            raise GitHubError(f"Unexpected response from GitHub for the tree of {repo}@{ref}")
         if body.get("truncated"):
             raise TreeTooLargeError(
                 f"{repo} is too large for the GitHub trees API; the listing was truncated"
             )
-        return [
-            TreeEntry(path=e["path"], type=e["type"], sha=e["sha"], mode=e.get("mode", "100644"))
-            for e in body["tree"]
-        ]
+        try:
+            return [
+                TreeEntry(e["path"], e["type"], e["sha"], e.get("mode", "100644"))
+                for e in body["tree"]
+            ]
+        except (KeyError, TypeError, AttributeError) as error:
+            raise GitHubError(
+                f"Unexpected response from GitHub for the tree of {repo}@{ref}"
+            ) from error
 
     def read_text(self, repo: str, ref: str, path: str) -> str:
         """Read one file.
@@ -127,7 +135,7 @@ class GitHubClient:
         Raises:
             GitHubError: The file doesn't exist or GitHub refused the request.
         """
-        return self.read_bytes(repo, ref, path).decode()
+        return self.read_bytes(repo, ref, path).decode(errors="replace")
 
     def read_bytes(self, repo: str, ref: str, path: str) -> bytes:
         """Read one file without decoding, for scripts and images as well as text.
@@ -155,21 +163,30 @@ class GitHubClient:
     ) -> httpx.Response:
         try:
             response = self._http.get(url, params=params, headers={**(headers or {}), **self._auth})
-        except httpx.TransportError as error:
+        except httpx.HTTPError as error:
             raise GitHubError(f"Could not reach GitHub ({type(error).__name__}: {error})") from None
         if response.is_success:
             return response
-        raise GitHubError(_explain(response, what))
+        raise GitHubError(_explain(response, what, has_token=self._has_token))
 
 
-def _explain(response: httpx.Response, what: str) -> str:
+def _is_json(response: httpx.Response) -> bool:
+    try:
+        response.json()
+    except ValueError:
+        return False
+    return True
+
+
+def _explain(response: httpx.Response, what: str, *, has_token: bool) -> str:
     status = response.status_code
     if status in (403, 429) and response.headers.get("x-ratelimit-remaining") == "0":
         return f"GitHub API rate limit exceeded; {AUTH_HINT} to raise it."
     if status == 401:
         return "GitHub rejected the token (HTTP 401). Check GITHUB_TOKEN / GH_TOKEN."
     if status in (404, 422):
-        return f"{what} not found. If it is private, {AUTH_HINT}."
+        hint = "Check the token can read it" if has_token else f"If it is private, {AUTH_HINT}"
+        return f"{what} not found. {hint}."
     if status >= 500:
         return f"Could not reach GitHub (HTTP {status} for {what}). Try again later."
     return f"GitHub refused the request for {what} (HTTP {status})."

@@ -89,6 +89,18 @@ def test_truncated_tree_is_reported_instead_of_listing_partially(
     assert "too large" in out.text
 
 
+def test_installed_warns_when_catalog_membership_is_unknown(
+    github: FakeGitHub, run: Callable[..., Run]
+) -> None:
+    github.truncated = True
+
+    out = run("installed")
+
+    assert out.result.exit_code == 0
+    assert "Warning:" in out.text
+    assert "too large" in out.text
+
+
 def test_one_unreadable_skill_md_is_reported_with_its_path(
     github: FakeGitHub, run: Callable[..., Run]
 ) -> None:

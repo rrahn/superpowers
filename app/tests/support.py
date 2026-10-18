@@ -115,7 +115,8 @@ def make_runner(github: FakeGitHub, home: Path, cwd: Path) -> Callable[..., Run]
             color_system="truecolor",
         )
         deps = Dependencies(github=github.client(), console=console, home=home, cwd=cwd)
-        result = CliRunner().invoke(create_app(deps), list(args), env=env)
+        hermetic = {"SKILLCTL_REPO": None, "SKILLCTL_REF": None}
+        result = CliRunner().invoke(create_app(deps), list(args), env={**hermetic, **(env or {})})
         if result.exception and not isinstance(result.exception, SystemExit):
             raise result.exception
         return Run(result, console)
