@@ -20,6 +20,7 @@ class FakeGitHub:
     repo: str = "rrahn/superpowers"
     ref: str = "main"
     requests: list[httpx.Request] = field(default_factory=list)
+    fail: bool = False
 
     def _tree(self) -> dict[str, object]:
         dirs = {p.rsplit("/", i)[0] for p in self.files for i in range(1, p.count("/") + 1)}
@@ -29,6 +30,8 @@ class FakeGitHub:
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
+        if self.fail:
+            return httpx.Response(503, json={"message": "Service Unavailable"})
         url = request.url
         if url.host == "api.github.com" and url.path == f"/repos/{self.repo}/git/trees/{self.ref}":
             return httpx.Response(200, json=self._tree())

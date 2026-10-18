@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from importlib.metadata import version
+from pathlib import Path
 from typing import Annotated
 
 import httpx
@@ -11,6 +12,7 @@ from rich.console import Console
 from skillctl import views
 from skillctl.catalog import Catalog, CatalogQuery, CatalogRef
 from skillctl.github import GitHubClient
+from skillctl.scopes import NotInRepositoryError, ScopeName, Scopes
 
 
 def _default_github() -> GitHubClient:
@@ -24,6 +26,8 @@ class Dependencies:
     github: GitHubClient = field(default_factory=_default_github)
     console: Console = field(default_factory=Console)
     catalog_ref: CatalogRef = field(default_factory=CatalogRef)
+    home: Path = field(default_factory=Path.home)
+    cwd: Path = field(default_factory=Path.cwd)
 
 
 def _print_version(value: bool) -> None:
@@ -75,6 +79,34 @@ def create_app(deps: Dependencies) -> typer.Typer:
             deps.console.print_json(data=views.catalog_json(skills))
         else:
             deps.console.print(views.catalog_table(skills, f"{where.repo}@{where.ref}"))
+
+    @app.command()
+    def installed(
+        scope: Annotated[
+            ScopeName | None, typer.Option("--scope", help="Only this scope (default: all).")
+        ] = None,
+        as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+    ) -> None:
+        """List skills installed globally and, inside a repository, locally."""
+        scopes = Scopes(deps.home, deps.cwd)
+        try:
+            selected = scopes.select(scope)
+        except NotInRepositoryError as error:
+            deps.console.print(f"[red]Error:[/] {error}")
+            raise typer.Exit(1) from error
+        found = [i for s in selected for i in s.installations()]
+        try:
+            catalog_names: set[str] | None = Catalog(deps.github, deps.catalog_ref).names()
+        except httpx.HTTPError:
+            catalog_names = None
+        if as_json:
+            deps.console.print_json(data=views.installed_json(found, catalog_names))
+            return
+        deps.console.print(views.installed_table(found, catalog_names, deps.home))
+        if scope is None and scopes.local_scope is None:
+            deps.console.print(
+                "[dim]Not inside a git repository: local scope (.github/skills) not shown.[/]"
+            )
 
     return app
 
