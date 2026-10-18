@@ -14,6 +14,7 @@ from typer.testing import CliRunner, Result
 
 from skillctl.cli import Dependencies, create_app
 from skillctl.github import GitHubClient
+from skillctl.upstream import git_blob_sha
 
 
 @dataclass
@@ -41,7 +42,7 @@ class FakeGitHub:
             {
                 "path": p,
                 "type": "blob",
-                "sha": _sha(c),
+                "sha": git_blob_sha(c.encode()),
                 "mode": "100755" if p in self.executables else "100644",
             }
             for p, c in self.files.items()

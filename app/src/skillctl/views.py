@@ -8,6 +8,85 @@ from rich.table import Table
 from skillctl.catalog import CatalogSkill
 from skillctl.scopes import Installation
 from skillctl.sources import CollectionOverview
+from skillctl.upstream import CollectionReport, SkillChange
+
+_STATUS_STYLE = {
+    "changed": "[yellow]changed[/]",
+    "new": "[green]new[/]",
+    "orphaned": "[magenta]orphaned[/]",
+    "unavailable": "[red]unavailable[/]",
+    "no upstream": "[dim]no upstream[/]",
+}
+
+
+def upstream_json(reports: list[CollectionReport]) -> list[dict[str, object]]:
+    """Convert upstream reports to their stable JSON shape.
+
+    Args:
+        reports: Collection reports to convert.
+
+    Returns:
+        One object per collection with its skills' change sets.
+    """
+    return [
+        {
+            "collection": r.collection,
+            "status": r.status,
+            "upstream": r.upstream,
+            "reason": r.reason,
+            "skills": [
+                {
+                    "skill": s.skill,
+                    "status": s.status,
+                    "added": list(s.added),
+                    "modified": list(s.modified),
+                    "deleted": list(s.deleted),
+                }
+                for s in r.skills
+            ],
+        }
+        for r in reports
+    ]
+
+
+def upstream_table(reports: list[CollectionReport]) -> Table:
+    """Tabulate what a sync would change; unchanged skills are counted, not listed.
+
+    Args:
+        reports: Collection reports to show, in order.
+
+    Returns:
+        A table with one row per changed/new/orphaned skill and per collection that wasn't
+        compared, with file-level detail.
+    """
+    table = Table(title="Upstream check (dry run)", title_justify="left", expand=True)
+    table.add_column("Collection", style="bold magenta", no_wrap=True)
+    table.add_column("Skill", style="bold cyan", no_wrap=True)
+    table.add_column("Status", no_wrap=True)
+    table.add_column("Would change", ratio=1, overflow="fold")
+    counts = dict.fromkeys(("changed", "new", "orphaned", "unchanged"), 0)
+    for report in reports:
+        if report.status != "checked":
+            reason = f"[dim]{report.reason or ''}[/]"
+            table.add_row(report.collection, "—", _STATUS_STYLE[report.status], reason)
+            continue
+        for skill in report.skills:
+            counts[skill.status] += 1
+            if skill.status != "unchanged":
+                table.add_row(
+                    report.collection, skill.skill, _STATUS_STYLE[skill.status], _changes(skill)
+                )
+    table.caption = " · ".join(f"{n} {status}" for status, n in counts.items())
+    return table
+
+
+def _changes(skill: SkillChange) -> str:
+    if skill.status == "orphaned":
+        return "[dim]kept — no longer upstream[/]"
+    lines = [f"[green]+ {p}[/]" for p in skill.added]
+    lines += [f"[yellow]~ {p}[/]" for p in skill.modified]
+    lines += [f"[red]- {p}[/]" for p in skill.deleted]
+    return "\n".join(lines)
 
 
 def sources_json(rows: list[CollectionOverview]) -> list[dict[str, object]]:
