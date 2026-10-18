@@ -136,7 +136,7 @@ def test_installed_local_scope_outside_a_repository_fails(run: Callable[..., Run
     out = run("installed", "--scope", "local")
 
     assert out.result.exit_code == 1
-    assert "not inside a git repository" in out.text
+    assert "not inside a git repository" in " ".join(out.text.split())
 
 
 def test_installed_outside_a_repository_hints_at_the_local_scope(
