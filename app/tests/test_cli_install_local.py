@@ -58,7 +58,7 @@ def test_install_local_outside_a_repository_fails_and_writes_nothing(
     out = run("install", "tdd", "--scope", "local")
 
     assert out.result.exit_code == 1
-    assert "not inside a git repository" in out.text
+    assert "not inside a git repository" in " ".join(out.text.split())
     assert list(cwd.iterdir()) == []
 
 
