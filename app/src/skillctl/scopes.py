@@ -145,7 +145,7 @@ class Scopes:
     @property
     def local_scope(self) -> Scope | None:
         """The repository scope `<repo>/.github/skills`, or None outside a git repository."""
-        repo = _repository_root(self.cwd)
+        repo = repository_root(self.cwd)
         return Scope(ScopeName.LOCAL, repo / ".github" / "skills") if repo else None
 
     def select(self, name: ScopeName | None) -> list[Scope]:
@@ -184,5 +184,6 @@ class Scopes:
         return scope
 
 
-def _repository_root(start: Path) -> Path | None:
+def repository_root(start: Path) -> Path | None:
+    """Find the nearest ancestor of `start` (inclusive) holding a `.git` directory or file."""
     return next((d for d in (start, *start.parents) if (d / ".git").exists()), None)

@@ -1,0 +1,17 @@
+# serializer version: 1
+# name: test_sources_list_table
+  '''
+  Upstream sources · skills/sources.toml                                                              
+  ┏━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+  ┃ Collection  ┃ Kind   ┃ Upstream                      ┃ Skills ┃ Note                             ┃
+  ┡━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+  │ mattpocock  │ github │ mattpocock/skills@main:skills │      2 │                                  │
+  │ misc        │ none   │ —                             │      1 │ Internally maintained — ça       │
+  │             │        │                               │        │ marche.                          │
+  │ nextflow    │ local  │ ~/src/nextflow-skills         │      0 │ Private upstream.                │
+  │ superpowers │ github │ obra/superpowers@main:skills  │      0 │                                  │
+  └─────────────┴────────┴───────────────────────────────┴────────┴──────────────────────────────────┘
+                                        4 collections · 3 skills                                      
+  
+  '''
+# ---

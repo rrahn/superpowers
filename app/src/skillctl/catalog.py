@@ -208,6 +208,19 @@ def _is_skill_file(entry: TreeEntry) -> bool:
     )
 
 
+def skill_name(skill_md: str) -> str | None:
+    """Read the `name` from a `SKILL.md` frontmatter.
+
+    Args:
+        skill_md: The full text of a `SKILL.md`.
+
+    Returns:
+        The declared name, or None when the frontmatter is missing or has no string name.
+    """
+    name = _frontmatter(skill_md).get("name")
+    return name if isinstance(name, str) else None
+
+
 def _frontmatter(text: str) -> dict[str, object]:
     lines = text.lstrip("\ufeff").splitlines()
     if not lines or lines[0].strip() != "---":

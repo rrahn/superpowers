@@ -1,11 +1,48 @@
 """Rich renderables for domain objects; commands print these and nothing else."""
 
+from dataclasses import asdict
 from pathlib import Path
 
 from rich.table import Table
 
 from skillctl.catalog import CatalogSkill
 from skillctl.scopes import Installation
+from skillctl.sources import CollectionOverview
+
+
+def sources_json(rows: list[CollectionOverview]) -> list[dict[str, object]]:
+    """Convert collection overviews to their stable JSON shape.
+
+    Args:
+        rows: Collections to convert.
+
+    Returns:
+        One object per collection.
+    """
+    return [asdict(r) for r in rows]
+
+
+def sources_table(rows: list[CollectionOverview], path: str) -> Table:
+    """Tabulate collections and their upstream sources.
+
+    Args:
+        rows: Collections to show, in order.
+        path: Sources file location shown in the title.
+
+    Returns:
+        A table with kind, upstream, local skill count, and note per collection.
+    """
+    kinds = {"github": "[green]github[/]", "local": "[blue]local[/]", "none": "[dim]none[/]"}
+    table = Table(title=f"Upstream sources · {path}", title_justify="left", expand=True)
+    table.add_column("Collection", style="bold magenta", no_wrap=True)
+    table.add_column("Kind", no_wrap=True)
+    table.add_column("Upstream", overflow="fold")
+    table.add_column("Skills", justify="right")
+    table.add_column("Note", style="dim", ratio=1)
+    for r in rows:
+        table.add_row(r.collection, kinds[r.kind], r.upstream or "—", str(r.skills), r.note or "")
+    table.caption = f"{len(rows)} collections · {sum(r.skills for r in rows)} skills"
+    return table
 
 
 def catalog_json(skills: list[CatalogSkill]) -> list[dict[str, str]]:

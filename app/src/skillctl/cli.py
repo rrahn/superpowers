@@ -18,6 +18,7 @@ from skillctl.errors import SkillctlError
 from skillctl.github import GitHubClient, GitHubError, token_from_env
 from skillctl.installer import Installer
 from skillctl.scopes import ScopeName, Scopes
+from skillctl.sources import SOURCES_FILE, SourcesFile
 
 
 @dataclass(frozen=True)
@@ -156,6 +157,25 @@ def create_app(deps: Dependencies) -> typer.Typer:
         deps.console.print(
             f"[green]Installed[/] [bold]{skill.name}[/] from {skill.path} into {scope.root}"
         )
+
+    sources_app = typer.Typer(
+        help="Upstream sources of the catalog's collections (run inside the catalog repo).",
+        no_args_is_help=True,
+    )
+    app.add_typer(sources_app, name="sources")
+
+    @sources_app.command("list")
+    def sources_list(
+        as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+    ) -> None:
+        """List every collection and the upstream it is curated from."""
+        with reported():
+            file = SourcesFile.find(deps.cwd)
+            rows = file.overview()
+        if as_json:
+            deps.console.print_json(data=views.sources_json(rows))
+        else:
+            deps.console.print(views.sources_table(rows, SOURCES_FILE.as_posix()))
 
     return app
 

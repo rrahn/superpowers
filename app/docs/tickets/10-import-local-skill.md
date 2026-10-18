@@ -7,5 +7,7 @@
 **Status:** ready-for-agent
 
 - [ ] Validates `SKILL.md` name matches directory
+- [ ] Provenance per skill in `skills/sources.toml`: upstream, path inside the upstream, and commit/content hash used by `upstream check` and `sync`
+- [ ] `~` in local paths is expanded when read, kept as written in the file
 - [ ] Refuses to overwrite an existing catalog skill without `--force`
 - [ ] Local provenance participates in `upstream check`
