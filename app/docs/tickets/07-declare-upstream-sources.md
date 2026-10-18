@@ -4,8 +4,8 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Invalid files fail with a message naming the bad key
-- [ ] Seeded with ai2code, mattpocock, superpowers, misc, nextflow (private/local ones marked as such)
-- [ ] Snapshot of the table
+- [x] Invalid files fail with a message naming the bad key
+- [x] Seeded with ai2code, mattpocock, superpowers, misc, nextflow (private/local ones marked as such)
+- [x] Snapshot of the table

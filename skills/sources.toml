@@ -1,0 +1,22 @@
+# Upstream sources of the skills curated under skills/<collection>/.
+# Read by `skillctl sources list` and `skillctl upstream check` (app/).
+#
+# upstream = { github = "owner/name", ref = "main", path = "dir/in/repo" }  # public repo
+# upstream = { local = "/path/to/checkout" }                               # this machine only
+# [collections.<name>.skills.<skill>] overrides the upstream of one skill (provenance).
+version = 1
+
+[collections.mattpocock]
+upstream = { github = "mattpocock/skills", ref = "main", path = "skills" }
+
+[collections.superpowers]
+upstream = { github = "obra/superpowers", ref = "main", path = "skills" }
+
+[collections.ai2code]
+note = "Origin not recorded yet."
+
+[collections.misc]
+note = "Internally maintained."
+
+[collections.nextflow]
+note = "Private upstream."
