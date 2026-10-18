@@ -83,6 +83,28 @@ def test_installed_shows_symlink_targets(
     ]
 
 
+def test_installed_resolves_relative_symlink_targets(home: Path, run: Callable[..., Run]) -> None:
+    target = make_skill(home / "clone", "brainstorming")
+    global_root(home).mkdir(parents=True)
+    (global_root(home) / "brainstorming").symlink_to(Path("../../clone/brainstorming"))
+
+    out = run("installed", "--json")
+
+    assert out.json()[0]["link"] == str(target)
+
+
+def test_installed_fails_clearly_on_a_malformed_lockfile(
+    home: Path, run: Callable[..., Run]
+) -> None:
+    make_skill(global_root(home), "tdd")
+    (global_root(home) / ".skillctl-lock.json").write_text("{not json")
+
+    out = run("installed")
+
+    assert out.result.exit_code == 1
+    assert ".skillctl-lock.json is not a valid lockfile" in out.text.replace("\n", "")
+
+
 def test_installed_inside_a_repository_also_lists_the_local_scope(
     github: FakeGitHub, home: Path, cwd: Path, run: Callable[..., Run]
 ) -> None:

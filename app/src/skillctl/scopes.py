@@ -25,6 +25,36 @@ class Installation:
     link: Path | None
 
 
+class LockfileError(Exception):
+    """A lockfile exists but can't be read."""
+
+
+@dataclass(frozen=True)
+class Lockfile:
+    """`.skillctl-lock.json`: the managed installations of one scope (ADR-0002)."""
+
+    path: Path
+
+    def entries(self) -> dict[str, dict[str, object]]:
+        """Read the recorded installations.
+
+        Returns:
+            Entries keyed by skill name; empty when the lockfile doesn't exist.
+
+        Raises:
+            LockfileError: The file isn't a JSON object with a `skills` object.
+        """
+        if not self.path.is_file():
+            return {}
+        try:
+            skills = json.loads(self.path.read_text()).get("skills", {})
+        except (ValueError, AttributeError) as error:
+            raise LockfileError(f"{self.path} is not a valid lockfile") from error
+        if not isinstance(skills, dict):
+            raise LockfileError(f"{self.path} is not a valid lockfile")
+        return skills
+
+
 @dataclass(frozen=True)
 class Scope:
     """One install location with its lockfile."""
@@ -32,33 +62,35 @@ class Scope:
     name: ScopeName
     root: Path
 
+    @property
+    def lockfile(self) -> Lockfile:
+        """The lockfile recording this scope's managed installations."""
+        return Lockfile(self.root / LOCKFILE)
+
     def installations(self) -> list[Installation]:
         """List skill directories in this scope.
 
         Returns:
             Every entry holding a `SKILL.md`, plus symlinks (even dangling), sorted by name.
+
+        Raises:
+            LockfileError: The scope's lockfile is malformed.
         """
         if not self.root.is_dir():
             return []
-        managed = self._locked_names()
+        managed = self.lockfile.entries().keys()
         found = [
             Installation(
                 name=entry.name,
                 scope=self.name,
                 managed=entry.name in managed,
-                link=entry.readlink() if entry.is_symlink() else None,
+                link=entry.resolve() if entry.is_symlink() else None,
             )
             for entry in self.root.iterdir()
             if not entry.name.startswith(".")
             and (entry.is_symlink() or (entry / "SKILL.md").is_file())
         ]
         return sorted(found, key=lambda i: i.name)
-
-    def _locked_names(self) -> set[str]:
-        lockfile = self.root / LOCKFILE
-        if not lockfile.is_file():
-            return set()
-        return set(json.loads(lockfile.read_text()).get("skills", {}))
 
 
 class NotInRepositoryError(Exception):

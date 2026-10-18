@@ -12,7 +12,7 @@ from rich.console import Console
 from skillctl import views
 from skillctl.catalog import Catalog, CatalogQuery, CatalogRef
 from skillctl.github import GitHubClient
-from skillctl.scopes import NotInRepositoryError, ScopeName, Scopes
+from skillctl.scopes import LockfileError, NotInRepositoryError, ScopeName, Scopes
 
 
 def _default_github() -> GitHubClient:
@@ -91,10 +91,10 @@ def create_app(deps: Dependencies) -> typer.Typer:
         scopes = Scopes(deps.home, deps.cwd)
         try:
             selected = scopes.select(scope)
-        except NotInRepositoryError as error:
+            found = [i for s in selected for i in s.installations()]
+        except (NotInRepositoryError, LockfileError) as error:
             deps.console.print(f"[red]Error:[/] {error}")
             raise typer.Exit(1) from error
-        found = [i for s in selected for i in s.installations()]
         try:
             catalog_names: set[str] | None = Catalog(deps.github, deps.catalog_ref).names()
         except httpx.HTTPError:

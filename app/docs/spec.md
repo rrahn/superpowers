@@ -67,7 +67,7 @@ A Python CLI, `skillctl`, in two epics:
   syrupy, ruff, ty, pre-commit.
 - **Commands** (typer):
   - `skillctl available [--collection C] [--search Q] [--json]` — catalog view.
-  - `skillctl installed [--scope global|local|all] [--json]` — installations view.
+  - `skillctl installed [--scope global|local] [--json]` — installations view (all scopes when omitted).
   - `skillctl install NAME [--scope global|local] [--force]`.
   - `skillctl sources list | add` — upstream sources (Epic B).
   - `skillctl upstream check | sync | import` — curation (Epic B).
@@ -76,8 +76,10 @@ A Python CLI, `skillctl`, in two epics:
   - `Catalog` — `skills() -> list[CatalogSkill]`, `files(skill)`. Backed by a `GitHubClient`
     **adapter**, the only thing that talks HTTP. Its seam is real because the HTTP transport varies
     (real network vs. `httpx.MockTransport`); Epic B reuses `GitHubClient` for GitHub upstreams.
-  - `Scope` — **strategy** per install location (`GlobalScope`, `LocalScope`) exposing `root`,
-    `installations()`, `write(skill, files)`. `ScopeResolver` picks available scopes from cwd/home.
+  - `Scope` — one install location (`name`, `root`, `lockfile`, `installations()`). Global and
+    local differ only in their root, so they are one class, not a strategy hierarchy, until a
+    second harness gives the variation a real seam. `Scopes` resolves the available scopes from
+    home and cwd (repo root = nearest ancestor with `.git`).
   - `Lockfile` — load/record/entries; owned by a scope.
   - `Installer` — **facade** the CLI calls: resolves the skill in the catalog, stages files in a temp
     dir, atomically moves them into the scope, records the lockfile entry.
@@ -91,7 +93,7 @@ A Python CLI, `skillctl`, in two epics:
   No singletons, no module-level globals.
 - **Skill discovery.** A catalog skill is any `skills/**/<name>/SKILL.md` whose frontmatter `name`
   equals `<name>`. Mismatches are skipped (e.g. the stray `skills/SKILL.md`).
-- **Scopes.** See ADR-0001. Local scope root = `git rev-parse --show-toplevel` of cwd + `/.github/skills`.
+- **Scopes.** See ADR-0001. Local scope root = nearest ancestor of cwd containing `.git` (dir or file) + `/.github/skills`.
 - **Managed.** See ADR-0002.
 - **Catalog transport.** See ADR-0003.
 - **Sources file** (Epic B): `skills/sources.toml` at the catalog repository root; provenance per

@@ -4,10 +4,10 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Managed iff recorded in the scope lockfile (ADR-0002)
-- [ ] Symlinked installations show their target
-- [ ] Outside a git repository only the global scope is shown, with a hint
-- [ ] Catalog unreachable degrades to an "unknown" in-catalog column, not a failure
-- [ ] Text and SVG snapshot
+- [x] Managed iff recorded in the scope lockfile (ADR-0002)
+- [x] Symlinked installations show their target
+- [x] Outside a git repository only the global scope is shown, with a hint
+- [x] Catalog unreachable degrades to an "unknown" in-catalog column, not a failure
+- [x] Text and SVG snapshot
