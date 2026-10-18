@@ -10,6 +10,7 @@ from pathlib import Path, PurePosixPath
 from typing import Literal
 
 from skillctl.errors import SkillctlError
+from skillctl.fsops import is_ignored
 from skillctl.github import GitHubClient, GitHubError
 from skillctl.sources import Collection, GitHubUpstream, LocalUpstream, SourcesError, SourcesFile
 
@@ -89,7 +90,7 @@ def group_by_skill(files: Iterable[tuple[str, str]]) -> SkillTrees:
 
 
 def _visible(path: str) -> bool:
-    return not any(p.startswith(".") or p == "__pycache__" for p in PurePosixPath(path).parts)
+    return not any(is_ignored(part) for part in PurePosixPath(path).parts)
 
 
 def directory_files(directory: Path) -> list[tuple[str, str]]:
@@ -252,7 +253,9 @@ class UpstreamChecker:
             source = self._existing(origin)
         except OriginMissingError as error:
             return SkillChange(skill, "unavailable", reason=str(error))
-        here = self._tree.files(self._sources.root / "skills" / name / skill)
+        # Both sides raw: import and sync copy origin bytes verbatim, so git's eol filters
+        # must not make a fresh copy look modified.
+        here = directory_files(self._sources.root / "skills" / name / skill)
         there = directory_files(source)
         local = {skill: {p: i for p, i in here if _visible(p)}}
         upstream = {skill: {p: i for p, i in there if _visible(p)}}

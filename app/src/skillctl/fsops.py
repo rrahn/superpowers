@@ -36,6 +36,11 @@ def exists(path: Path) -> bool:
     return path.is_symlink() or path.exists()
 
 
+def is_ignored(name: str) -> bool:
+    """Whether a file or directory name is never part of a skill (hidden, `__pycache__`)."""
+    return name.startswith(".") or name == "__pycache__"
+
+
 def _swap(staging: Path, target: Path) -> None:
     backup = target.with_name(f".{target.name}.previous")
     _remove(backup)

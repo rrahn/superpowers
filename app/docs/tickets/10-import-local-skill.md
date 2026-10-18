@@ -11,3 +11,5 @@
 - [x] `~` in local paths is expanded when read, kept as written in the file
 - [x] Refuses to overwrite an existing catalog skill without `--force`
 - [x] Local provenance participates in `upstream check`
+
+Also in this ticket: collections whose `upstream` is `local` are now compared too (the `skipped` status from ticket 09 is gone), and collection names are validated.

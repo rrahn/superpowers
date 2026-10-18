@@ -167,3 +167,76 @@ def test_import_works_offline(
 
     assert out.result.exit_code == 0
     assert github.requests == []
+
+
+@pytest.mark.parametrize("collection", ["../outside", "/no-such-root/abs", "a/b", ""])
+def test_import_rejects_collection_names_that_leave_skills_dir(
+    catalog_repo: Path, origin: Path, run: Callable[..., Run], collection: str
+) -> None:
+    out = run("upstream", "import", str(origin), "--collection", collection)
+
+    assert out.result.exit_code == 1
+    assert "collection name" in out.text
+    assert sources_text(catalog_repo) == SOURCES
+
+
+def test_import_rejects_a_skill_that_already_lives_in_the_catalog(
+    catalog_repo: Path, run: Callable[..., Run]
+) -> None:
+    inside = catalog_repo / "skills" / "misc" / "handwritten"
+
+    out = run("upstream", "import", str(inside), "--collection", "misc", "--force")
+
+    assert out.result.exit_code == 1
+    assert "already part of the catalog" in out.text.replace("\n", "")
+
+
+def test_import_rejects_symlinks_pointing_outside_the_skill(
+    catalog_repo: Path, origin: Path, home: Path, run: Callable[..., Run]
+) -> None:
+    (origin / "secrets").symlink_to(home)
+
+    out = run("upstream", "import", str(origin), "--collection", "misc")
+
+    assert out.result.exit_code == 1
+    assert "points outside" in out.text
+    assert not (catalog_repo / "skills" / "misc" / "caveman").exists()
+
+
+def test_failed_provenance_write_leaves_the_catalog_untouched(
+    catalog_repo: Path, origin: Path, run: Callable[..., Run]
+) -> None:
+    layout = 'version = 1\ncollections = { misc = { note = "inline" } }\n'
+    (catalog_repo / "skills" / "sources.toml").write_text(layout)
+
+    out = run("upstream", "import", str(origin), "--collection", "misc")
+
+    assert out.result.exit_code == 1
+    assert not (catalog_repo / "skills" / "misc" / "caveman").exists()
+
+
+def test_crlf_origin_files_are_unchanged_right_after_import(
+    catalog_repo: Path, origin: Path, run: Callable[..., Run]
+) -> None:
+    (catalog_repo / ".gitattributes").write_text("*.md text eol=lf\n")
+    (origin / "examples" / "grunt.md").write_bytes(b"# grunt\r\n")
+    run("upstream", "import", str(origin), "--collection", "misc")
+
+    assert misc_skills(run)["caveman"]["status"] == "unchanged"
+
+
+def test_imported_skill_in_a_github_collection_is_compared_with_its_origin(
+    catalog_repo: Path, origin: Path, github: FakeGitHub, run: Callable[..., Run]
+) -> None:
+    mixed = 'version = 1\n\n[collections.misc]\nupstream = { github = "acme/skills" }\n'
+    (catalog_repo / "skills" / "sources.toml").write_text(mixed)
+    github.repo = "acme/skills"
+    github.files = {"handwritten/SKILL.md": skill_md("handwritten", "Ours.")}
+    run("upstream", "import", str(origin), "--collection", "misc")
+    (origin / "SKILL.md").write_text(skill_md("caveman", "Changed at the origin."))
+
+    skills = misc_skills(run)
+
+    assert skills["caveman"]["status"] == "changed"
+    assert skills["handwritten"]["status"] == "unchanged"
+    assert set(skills) == {"caveman", "handwritten"}

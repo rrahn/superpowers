@@ -1,5 +1,6 @@
 """Upstream sources: where each collection, and each imported skill, comes from."""
 
+import re
 import shutil
 import tempfile
 import tomllib
@@ -18,10 +19,28 @@ from skillctl.scopes import repository_root
 
 SOURCES_FILE = Path("skills") / "sources.toml"
 _TAGS = {"github": "GitHub", "local": "Local"}
+COLLECTION_NAME = r"^[A-Za-z0-9][A-Za-z0-9._-]*$"
 
 
 class SourcesError(SkillctlError):
     """The sources file is missing or invalid."""
+
+
+def check_collection_name(name: str) -> str:
+    """Reject collection names that aren't a single directory under `skills/`.
+
+    Args:
+        name: The proposed collection name.
+
+    Returns:
+        The name, unchanged.
+
+    Raises:
+        SourcesError: `name` is empty, contains `/`, or starts with `.`.
+    """
+    if not re.fullmatch(COLLECTION_NAME, name):
+        raise SourcesError(f"Invalid collection name {name!r}: use letters, digits, . _ -")
+    return name
 
 
 class _Strict(BaseModel):
@@ -104,7 +123,9 @@ class Sources(_Strict):
     """The parsed sources file."""
 
     version: Literal[1] = 1
-    collections: dict[str, Collection] = Field(default_factory=dict)
+    collections: dict[Annotated[str, Field(pattern=COLLECTION_NAME)], Collection] = Field(
+        default_factory=dict
+    )
 
 
 class SourcesFile:
@@ -173,6 +194,7 @@ class SourcesFile:
                 doesn't exist upstream, or the file is invalid or can't be edited.
             GitHubError: The repository or ref doesn't exist, or GitHub is unreachable.
         """
+        check_collection_name(collection)
         current = self.load().collections.get(collection)
         if current and current.upstream and not force:
             raise SourcesError(
@@ -183,20 +205,38 @@ class SourcesFile:
         self._edit(collection, lambda table: _set_upstream(table, upstream))
         return found
 
-    def record_provenance(self, collection: str, skill: str, origin: LocalUpstream) -> None:
+    def record_provenance(
+        self,
+        collection: str,
+        skill: str,
+        origin: LocalUpstream,
+        *,
+        before_write: Callable[[], None] | None = None,
+    ) -> None:
         """Record that `skill` in `collection` was imported from `origin`.
+
+        The new file content is prepared and validated first; `before_write` runs only if that
+        succeeded, and the file is written only if `before_write` succeeded.
 
         Args:
             collection: Collection name; declared when missing.
             skill: Skill path inside the collection.
             origin: Where the skill was copied from.
+            before_write: Work that must succeed before the provenance is written.
 
         Raises:
-            SourcesError: The file is invalid or can't be edited.
+            SourcesError: The collection name is invalid, or the file is invalid or can't be
+                edited.
         """
-        self._edit(collection, lambda table: _set_provenance(table, skill, origin))
+        self._edit(collection, lambda table: _set_provenance(table, skill, origin), before_write)
 
-    def _edit(self, collection: str, change: Callable[[Any], None]) -> None:
+    def _edit(
+        self,
+        collection: str,
+        change: Callable[[Any], None],
+        before_write: Callable[[], None] | None = None,
+    ) -> None:
+        check_collection_name(collection)
         document = tomlkit.parse(self._read())
         try:
             collections = document.setdefault("collections", tomlkit.table(is_super_table=True))
@@ -207,6 +247,8 @@ class SourcesFile:
             ) from error
         text = tomlkit.dumps(document)
         self._validate(tomllib.loads(text))
+        if before_write:
+            before_write()
         self._write(text)
 
     def _read(self) -> str:
@@ -279,6 +321,7 @@ def _set_provenance(table: Any, skill: str, origin: LocalUpstream) -> None:
     skills = table.setdefault("skills", tomlkit.table(is_super_table=True))
     entry = tomlkit.table()
     entry["local"] = origin.local
+    entry.add(tomlkit.nl())
     skills[skill] = entry
 
 
