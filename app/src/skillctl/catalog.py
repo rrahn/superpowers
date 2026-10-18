@@ -1,0 +1,90 @@
+"""The catalog: skills installable from the catalog repository."""
+
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from pathlib import PurePosixPath
+
+import yaml
+
+from skillctl.github import GitHubClient, TreeEntry
+
+SKILLS_ROOT = "skills"
+SKILL_FILE = "SKILL.md"
+
+
+@dataclass(frozen=True)
+class CatalogSkill:
+    """A skill published in the catalog repository."""
+
+    name: str
+    collection: str
+    description: str
+    path: str
+    tree_sha: str
+
+
+@dataclass(frozen=True)
+class CatalogRef:
+    """Which repository and ref the catalog is read from."""
+
+    repo: str = "rrahn/superpowers"
+    ref: str = "main"
+
+
+class Catalog:
+    """Discovers skills in the catalog repository through GitHub."""
+
+    def __init__(self, github: GitHubClient, where: CatalogRef) -> None:
+        self._github = github
+        self._where = where
+
+    def skills(self) -> list[CatalogSkill]:
+        """Return every valid skill, sorted by collection then name."""
+        entries = self._github.tree(self._where.repo, self._where.ref)
+        tree_shas = {e.path: e.sha for e in entries if e.type == "tree"}
+        candidates = [e for e in entries if _is_skill_file(e)]
+        with ThreadPoolExecutor(max_workers=16) as pool:
+            texts = pool.map(self._read, (e.path for e in candidates))
+            found = [
+                _parse(entry.path, text, tree_shas)
+                for entry, text in zip(candidates, texts, strict=True)
+            ]
+        return sorted((s for s in found if s), key=lambda s: (s.collection, s.name))
+
+    def _read(self, path: str) -> str:
+        return self._github.read_text(self._where.repo, self._where.ref, path)
+
+
+def _is_skill_file(entry: TreeEntry) -> bool:
+    parts = PurePosixPath(entry.path).parts
+    return (
+        entry.type == "blob"
+        and len(parts) >= 3
+        and parts[0] == SKILLS_ROOT
+        and parts[-1] == SKILL_FILE
+    )
+
+
+def _parse(path: str, text: str, tree_shas: dict[str, str]) -> CatalogSkill | None:
+    directory = PurePosixPath(path).parent
+    meta = _frontmatter(text)
+    if meta.get("name") != directory.name:
+        return None
+    return CatalogSkill(
+        name=directory.name,
+        collection=directory.parts[1],
+        description=" ".join(str(meta.get("description", "")).split()),
+        path=str(directory),
+        tree_sha=tree_shas.get(str(directory), ""),
+    )
+
+
+def _frontmatter(text: str) -> dict[str, object]:
+    if not text.startswith("---"):
+        return {}
+    _, block, *_ = [*text.split("---", 2), ""]
+    try:
+        meta = yaml.safe_load(block)
+    except yaml.YAMLError:
+        return {}
+    return meta if isinstance(meta, dict) else {}
