@@ -1,6 +1,7 @@
 import httpx
+import pytest
 
-from skillctl.github import GitHubClient, TreeEntry
+from skillctl.github import GitHubClient, GitHubError, TreeEntry, token_from_env
 
 
 def client_returning(response: httpx.Response, seen: list[httpx.Request]) -> GitHubClient:
@@ -44,3 +45,42 @@ def test_read_text_fetches_from_the_raw_content_host() -> None:
     assert str(seen[0].url) == (
         "https://raw.githubusercontent.com/rrahn/superpowers/main/skills/x/tdd/SKILL.md"
     )
+
+
+def test_token_is_sent_as_bearer_auth_to_api_and_raw_hosts() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, text="abc")
+
+    client = GitHubClient(httpx.Client(transport=httpx.MockTransport(handler)), token="s3cret")
+    client.commit("o/r", "main")
+    client.read_text("o/r", "main", "f")
+
+    assert [r.headers["authorization"] for r in seen] == ["Bearer s3cret", "Bearer s3cret"]
+
+
+def test_errors_never_include_the_token() -> None:
+    client = GitHubClient(
+        httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(401))),
+        token="s3cret",
+    )
+
+    with pytest.raises(GitHubError) as error:
+        client.commit("o/r", "main")
+
+    assert "s3cret" not in str(error.value)
+
+
+@pytest.mark.parametrize(
+    ("env", "token"),
+    [
+        ({"GITHUB_TOKEN": "a", "GH_TOKEN": "b"}, "a"),
+        ({"GH_TOKEN": "b"}, "b"),
+        ({"GITHUB_TOKEN": ""}, None),
+        ({}, None),
+    ],
+)
+def test_token_from_env_prefers_github_token(env: dict[str, str], token: str | None) -> None:
+    assert token_from_env(env) == token

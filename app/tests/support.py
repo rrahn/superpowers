@@ -26,6 +26,9 @@ class FakeGitHub:
     commit: str = "c0ffee0000000000000000000000000000000000"
     requests: list[httpx.Request] = field(default_factory=list)
     fail: bool = False
+    rate_limited: bool = False
+    offline: bool = False
+    truncated: bool = False
     unreadable: set[str] = field(default_factory=set)
     executables: set[str] = field(default_factory=set)
 
@@ -43,10 +46,18 @@ class FakeGitHub:
             }
             for p, c in self.files.items()
         ]
-        return {"sha": _sha("root"), "tree": entries, "truncated": False}
+        return {"sha": _sha("root"), "tree": entries, "truncated": self.truncated}
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
+        if self.offline:
+            raise httpx.ConnectError("nodename nor servname provided", request=request)
+        if self.rate_limited:
+            return httpx.Response(
+                403,
+                headers={"x-ratelimit-remaining": "0"},
+                json={"message": "API rate limit exceeded"},
+            )
         if self.fail:
             return httpx.Response(503, json={"message": "Service Unavailable"})
         url = request.url
@@ -95,7 +106,7 @@ class Run:
 def make_runner(github: FakeGitHub, home: Path, cwd: Path) -> Callable[..., Run]:
     """Build a CLI invoker against the fake GitHub, recording output on a fixed-width console."""
 
-    def _run(*args: str) -> Run:
+    def _run(*args: str, env: dict[str, str] | None = None) -> Run:
         console = Console(
             file=io.StringIO(),
             width=100,
@@ -104,7 +115,7 @@ def make_runner(github: FakeGitHub, home: Path, cwd: Path) -> Callable[..., Run]
             color_system="truecolor",
         )
         deps = Dependencies(github=github.client(), console=console, home=home, cwd=cwd)
-        result = CliRunner().invoke(create_app(deps), list(args))
+        result = CliRunner().invoke(create_app(deps), list(args), env=env)
         if result.exception and not isinstance(result.exception, SystemExit):
             raise result.exception
         return Run(result, console)
