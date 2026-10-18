@@ -8,6 +8,89 @@ from rich.table import Table
 from skillctl.catalog import CatalogSkill
 from skillctl.scopes import Installation
 from skillctl.sources import CollectionOverview
+from skillctl.upstream import CollectionReport, SkillChange
+
+_STATUS_STYLE = {
+    "changed": "[yellow]changed[/]",
+    "new": "[green]new[/]",
+    "orphaned": "[magenta]orphaned[/]",
+    "unavailable": "[red]unavailable[/]",
+    "skipped": "[dim]skipped[/]",
+    "no-upstream": "[dim]no upstream[/]",
+}
+
+
+def upstream_json(reports: list[CollectionReport]) -> list[dict[str, object]]:
+    """Convert upstream reports to their stable JSON shape.
+
+    Args:
+        reports: Collection reports to convert.
+
+    Returns:
+        One object per collection with the compared commit and its skills' change sets.
+    """
+    return [
+        {
+            "collection": r.collection,
+            "status": r.status,
+            "upstream": r.upstream,
+            "commit": r.commit,
+            "reason": r.reason,
+            "skills": [
+                {
+                    "skill": s.skill,
+                    "status": s.status,
+                    "added": list(s.added),
+                    "modified": list(s.modified),
+                    "deleted": list(s.deleted),
+                }
+                for s in r.skills
+            ],
+        }
+        for r in reports
+    ]
+
+
+def upstream_table(reports: list[CollectionReport]) -> Table:
+    """Tabulate what a sync would change, one section per collection.
+
+    Unchanged skills are counted in the caption, not listed.
+
+    Args:
+        reports: Collection reports to show, in order.
+
+    Returns:
+        A table with a heading row per collection and one row per changed, new, or orphaned
+        skill with file-level detail.
+    """
+    table = Table(title="Upstream check (dry run)", title_justify="left", expand=True)
+    table.add_column("Skill", style="cyan", overflow="fold", ratio=1)
+    table.add_column("Status", no_wrap=True)
+    table.add_column("Would change", overflow="fold", ratio=1)
+    counts = dict.fromkeys(("changed", "new", "orphaned", "unchanged"), 0)
+    for report in reports:
+        heading = f"[bold magenta]{report.collection}[/] [dim]{report.upstream or ''}[/]"
+        if report.status != "checked":
+            reason = f"[dim]{report.reason or ''}[/]"
+            table.add_row(heading, _STATUS_STYLE[report.status], reason, end_section=True)
+            continue
+        table.add_row(heading, "", f"[dim]@ {(report.commit or '')[:12]}[/]")
+        for skill in report.skills:
+            counts[skill.status] += 1
+            if skill.status != "unchanged":
+                table.add_row(f"  {skill.skill}", _STATUS_STYLE[skill.status], _changes(skill))
+        table.add_section()
+    table.caption = " · ".join(f"{n} {status}" for status, n in counts.items())
+    return table
+
+
+def _changes(skill: SkillChange) -> str:
+    if skill.status == "orphaned":
+        return "[dim]kept — no longer upstream[/]"
+    lines = [f"[green]+ {p}[/]" for p in skill.added]
+    lines += [f"[yellow]~ {p}[/]" for p in skill.modified]
+    lines += [f"[red]- {p}[/]" for p in skill.deleted]
+    return "\n".join(lines)
 
 
 def sources_json(rows: list[CollectionOverview]) -> list[dict[str, object]]:

@@ -19,6 +19,7 @@ from skillctl.github import GitHubClient, GitHubError, token_from_env
 from skillctl.installer import Installer
 from skillctl.scopes import ScopeName, Scopes
 from skillctl.sources import SOURCES_FILE, SourcesFile, github_upstream
+from skillctl.upstream import UpstreamChecker
 
 
 @dataclass(frozen=True)
@@ -207,6 +208,27 @@ def create_app(deps: Dependencies) -> typer.Typer:
             f"[green]Added[/] {collection} ← {upstream} "
             f"({found} skill{'s' if found != 1 else ''} upstream)"
         )
+
+    upstream_app = typer.Typer(
+        help="Compare curated collections with their upstream sources.", no_args_is_help=True
+    )
+    app.add_typer(upstream_app, name="upstream")
+
+    @upstream_app.command("check")
+    def upstream_check(
+        collection: Annotated[
+            str | None, typer.Argument(help="Only this collection (default: all).")
+        ] = None,
+        as_json: Annotated[bool, typer.Option("--json", help="Print JSON.")] = False,
+    ) -> None:
+        """Show what syncing with upstream would change. Writes nothing."""
+        with reported():
+            checker = UpstreamChecker(deps.github, SourcesFile.find(deps.cwd))
+            reports = checker.check(collection)
+        if as_json:
+            deps.console.print_json(data=views.upstream_json(reports))
+        else:
+            deps.console.print(views.upstream_table(reports))
 
     return app
 
