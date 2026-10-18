@@ -20,6 +20,7 @@ from skillctl.importer import LocalImporter
 from skillctl.installer import Installer
 from skillctl.scopes import ScopeName, Scopes
 from skillctl.sources import SOURCES_FILE, SourcesFile, github_upstream
+from skillctl.sync import Synchronizer, plan_sync
 from skillctl.upstream import UpstreamChecker
 
 
@@ -230,6 +231,42 @@ def create_app(deps: Dependencies) -> typer.Typer:
             deps.console.print_json(data=views.upstream_json(reports))
         else:
             deps.console.print(views.upstream_table(reports))
+
+    @upstream_app.command("sync")
+    def upstream_sync(
+        collection: Annotated[
+            str | None, typer.Argument(help="Only this collection (default: all).")
+        ] = None,
+        skills: Annotated[
+            list[str] | None,
+            typer.Argument(help="Only these skill paths; give the collection first."),
+        ] = None,
+        dry_run: Annotated[
+            bool, typer.Option("--dry-run", help="Show the plan; write nothing.")
+        ] = False,
+        yes: Annotated[bool, typer.Option("--yes", "-y", help="Don't ask to confirm.")] = False,
+    ) -> None:
+        """Apply upstream changes to the working tree. Orphaned skills are always kept."""
+        with reported():
+            sources = SourcesFile.find(deps.cwd)
+            reports = UpstreamChecker(deps.github, sources, deps.home).check(collection)
+            plan = plan_sync(reports, skills or [])
+        if not plan:
+            deps.console.print("[green]Already in sync[/] — nothing to apply.")
+            return
+        deps.console.print(views.upstream_table(plan, title="Sync plan"))
+        if dry_run:
+            deps.console.print("[dim]Dry run: nothing written.[/]")
+            return
+        count = sum(len(r.skills) for r in plan)
+        if not yes and not typer.confirm(f"Apply changes to {count} skill(s)?", default=False):
+            raise typer.Exit(1)
+        with reported():
+            written = Synchronizer(deps.github, sources).apply(plan)
+        deps.console.print(
+            f"[green]Synced[/] {written} skill(s). Nothing was committed: review with "
+            "`git diff -- skills/` and commit."
+        )
 
     @upstream_app.command("import")
     def upstream_import(

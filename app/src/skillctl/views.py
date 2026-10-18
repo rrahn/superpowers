@@ -51,19 +51,22 @@ def upstream_json(reports: list[CollectionReport]) -> list[dict[str, object]]:
     ]
 
 
-def upstream_table(reports: list[CollectionReport]) -> Table:
+def upstream_table(
+    reports: list[CollectionReport], title: str = "Upstream check (dry run)"
+) -> Table:
     """Tabulate what a sync would change, one section per collection.
 
     Unchanged skills are counted in the caption, not listed.
 
     Args:
         reports: Collection reports to show, in order.
+        title: Table title.
 
     Returns:
         A table with a heading row per collection and one row per changed, new, or orphaned
         skill with file-level detail.
     """
-    table = Table(title="Upstream check (dry run)", title_justify="left", expand=True)
+    table = Table(title=title, title_justify="left", expand=True)
     table.add_column("Skill", style="cyan", overflow="fold", ratio=1)
     table.add_column("Status", no_wrap=True)
     table.add_column("Would change", overflow="fold", ratio=1)

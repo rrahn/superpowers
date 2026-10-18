@@ -2,6 +2,8 @@
 
 import io
 import json
+import os
+import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from hashlib import sha1
@@ -32,6 +34,7 @@ class FakeGitHub:
     truncated: bool = False
     unreadable: set[str] = field(default_factory=set)
     executables: set[str] = field(default_factory=set)
+    symlinks: set[str] = field(default_factory=set)
 
     def _tree(self) -> dict[str, object]:
         dirs = {p.rsplit("/", i)[0] for p in self.files for i in range(1, p.count("/") + 1)}
@@ -43,7 +46,11 @@ class FakeGitHub:
                 "path": p,
                 "type": "blob",
                 "sha": git_blob_sha(c.encode()),
-                "mode": "100755" if p in self.executables else "100644",
+                "mode": "120000"
+                if p in self.symlinks
+                else "100755"
+                if p in self.executables
+                else "100644",
             }
             for p, c in self.files.items()
         ]
@@ -125,3 +132,16 @@ def make_runner(github: FakeGitHub, home: Path, cwd: Path) -> Callable[..., Run]
         return Run(result, console)
 
     return _run
+
+
+def write_files(root: Path, files: dict[str, str | bytes]) -> None:
+    """Create `files` (relative path → content) under `root`."""
+    for path, content in files.items():
+        (root / path).parent.mkdir(parents=True, exist_ok=True)
+        (root / path).write_bytes(content if isinstance(content, bytes) else content.encode())
+
+
+def git_init(path: Path) -> None:
+    """Make `path` a real git repository, immune to GIT_* variables set by git hooks."""
+    clean_env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    subprocess.run(["git", "init", "-q", str(path)], check=True, env=clean_env)  # noqa: S603, S607

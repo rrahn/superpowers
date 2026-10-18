@@ -84,10 +84,10 @@ A Python CLI, `skillctl`, in two epics:
   - `Installer` — **facade** the CLI calls: resolves the skill in the catalog, stages files in a temp
     dir, atomically moves them into the scope, records the lockfile entry.
   - `views` — pure functions turning domain objects into rich renderables; the CLI only wires.
-  - Epic B: `SourcesFile` (TOML, pydantic-validated), `UpstreamSource` adapters (`GitHubSource`,
-    `LocalSource`) behind one interface, `ChangeSetPlanner` (pure: two file trees → change set),
-    `Synchronizer` (applies a change set; **command** objects per file change so dry-run and apply
-    share one plan).
+  - Epic B: `SourcesFile` (TOML, pydantic-validated, comment-preserving edits), `UpstreamChecker`
+    (GitHub and local origins, read-only), pure `plan()` (two file trees → change set),
+    `plan_sync` + `Synchronizer` (dry-run and apply share the same narrowed check report; each
+    `SkillChange` carries its origin, so no per-file command objects were needed).
 - **Composition root.** `create_app(deps)` builds the typer app from a `Dependencies` object
   (catalog factory, home dir, cwd, console). `main()` wires real dependencies; tests wire fakes.
   No singletons, no module-level globals.

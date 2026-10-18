@@ -4,12 +4,10 @@
 
 **Blocked by:** 09, 10
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Dry-run and apply share one plan (identical output)
-- [ ] GitHub changes are read at the commit the check resolved, never a re-resolved ref
-- [ ] Imported skills sync from their recorded local origin, byte for byte
-- [ ] Each skill is replaced atomically (`fsops.replacing`); a failure leaves it untouched
-- [ ] Nothing committed; summary tells the user to review the diff
-
-Notes from ticket 10's review: give each `SkillChange` its origin (GitHub repo@commit:path, or the local path) so sync doesn't re-read `skills/sources.toml` to tell mixed collections apart.
+- [x] Dry-run and apply share one plan (identical output)
+- [x] GitHub changes are read at the commit the check resolved, never a re-resolved ref
+- [x] Imported skills sync from their recorded local origin, byte for byte
+- [x] Each skill is replaced atomically (`fsops.replacing`); a failure leaves it untouched
+- [x] Nothing committed; summary tells the user to review the diff

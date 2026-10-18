@@ -3,8 +3,8 @@
 import os
 import stat
 import subprocess
-from collections.abc import Iterable
-from dataclasses import dataclass, field
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass, field, replace
 from hashlib import sha1
 from pathlib import Path, PurePosixPath
 from typing import Literal
@@ -24,8 +24,28 @@ Status = Literal["unchanged", "changed", "new", "orphaned", "unavailable"]
 
 
 @dataclass(frozen=True)
+class GitHubOrigin:
+    """A skill directory in a GitHub repository at a fixed commit, with its files' identities."""
+
+    repo: str
+    commit: str
+    directory: str
+    files: FileTree = field(default_factory=dict, compare=False)
+
+
+@dataclass(frozen=True)
+class LocalOrigin:
+    """A skill directory on this machine."""
+
+    directory: Path
+
+
+Origin = GitHubOrigin | LocalOrigin
+
+
+@dataclass(frozen=True)
 class SkillChange:
-    """How one skill in a collection differs from its upstream."""
+    """How one skill in a collection differs from its upstream, and where to fetch it from."""
 
     skill: str
     status: Status
@@ -33,6 +53,7 @@ class SkillChange:
     modified: tuple[str, ...] = field(default=())
     deleted: tuple[str, ...] = field(default=())
     reason: str | None = None
+    origin: Origin | None = field(default=None, compare=False)
 
 
 def plan(*, local: SkillTrees, upstream: SkillTrees) -> list[SkillChange]:
@@ -191,6 +212,17 @@ def _mode(path: Path) -> str:
     return "100755" if path.stat().st_mode & stat.S_IXUSR else "100644"
 
 
+def _github_origins(
+    upstream: GitHubUpstream, commit: str, remote: SkillTrees
+) -> Callable[[str], Origin]:
+    prefix = f"{upstream.path}/" if upstream.path else ""
+    return lambda skill: GitHubOrigin(upstream.github, commit, f"{prefix}{skill}", remote[skill])
+
+
+def _local_origins(directory: Path) -> Callable[[str], Origin]:
+    return lambda skill: LocalOrigin(directory / skill)
+
+
 class UpstreamChecker:
     """Compares catalog collections and imported skills with where they came from. Read-only."""
 
@@ -235,8 +267,11 @@ class UpstreamChecker:
             if isinstance(upstream, GitHubUpstream):
                 commit = self._github.commit(upstream.github, upstream.ref)
                 remote = self._github_skills(upstream, commit)
+                origin_of = _github_origins(upstream, commit, remote)
             else:
-                remote = group_by_skill(directory_files(self._existing(upstream)))
+                directory = self._existing(upstream)
+                remote = group_by_skill(directory_files(directory))
+                origin_of = _local_origins(directory)
         except (GitHubError, OriginMissingError) as error:
             return CollectionReport(
                 name, "unavailable", str(upstream), reason=str(error), skills=imported
@@ -245,7 +280,11 @@ class UpstreamChecker:
         for skill in collection.skills:
             local.pop(skill, None)
             remote.pop(skill, None)
-        changes = sorted((*plan(local=local, upstream=remote), *imported), key=lambda c: c.skill)
+        compared = [
+            replace(c, origin=origin_of(c.skill)) if c.skill in remote else c
+            for c in plan(local=local, upstream=remote)
+        ]
+        changes = sorted((*compared, *imported), key=lambda c: c.skill)
         return CollectionReport(name, "checked", str(upstream), commit, skills=tuple(changes))
 
     def _compare_with_origin(self, name: str, skill: str, origin: LocalUpstream) -> SkillChange:
@@ -259,7 +298,7 @@ class UpstreamChecker:
         there = directory_files(source)
         local = {skill: {p: i for p, i in here if _visible(p)}}
         upstream = {skill: {p: i for p, i in there if _visible(p)}}
-        return plan(local=local, upstream=upstream)[0]
+        return replace(plan(local=local, upstream=upstream)[0], origin=LocalOrigin(source))
 
     def _existing(self, origin: LocalUpstream) -> Path:
         directory = origin.resolve(self._home)

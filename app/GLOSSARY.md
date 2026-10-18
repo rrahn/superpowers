@@ -45,4 +45,5 @@ changes: **added**, **modified**, **deleted**. A skill whose upstream no longer 
 **orphaned**; orphaned skills are never removed automatically. A skill whose upstream can't be
 reached (private repository, missing local path) is **unavailable**; nothing is compared or changed.
 
-**Sync**: materialising a change set into the catalog repository working tree.
+**Sync**: materialising a change set into the catalog repository working tree. Only **pending**
+skills (changed or new) are written; orphaned and unavailable skills are never touched.
