@@ -5,12 +5,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Discriminator, Field, Tag, ValidationError
 
+from skillctl.catalog import skill_name
 from skillctl.errors import SkillctlError
 from skillctl.scopes import repository_root
 
 SOURCES_FILE = Path("skills") / "sources.toml"
+_TAGS = {"github": "GitHub", "local": "Local"}
 
 
 class SourcesError(SkillctlError):
@@ -51,7 +53,19 @@ class LocalUpstream(_Strict):
         return self.local
 
 
-Upstream = GitHubUpstream | LocalUpstream
+def _upstream_tag(value: object) -> str | None:
+    keys = value.keys() if isinstance(value, dict) else vars(value).keys()
+    return next((tag for key, tag in _TAGS.items() if key in keys), None)
+
+
+Upstream = Annotated[
+    Annotated[GitHubUpstream, Tag(_TAGS["github"])] | Annotated[LocalUpstream, Tag(_TAGS["local"])],
+    Discriminator(
+        _upstream_tag,
+        custom_error_type="invalid_upstream",
+        custom_error_message='expected github = "owner/name" or local = "path"',
+    ),
+]
 
 
 class Collection(_Strict):
@@ -59,9 +73,6 @@ class Collection(_Strict):
 
     upstream: Upstream | None = None
     note: str | None = None
-    skills: dict[str, Upstream] = Field(
-        default_factory=dict, description="Per-skill provenance overriding the collection's."
-    )
 
 
 class Sources(_Strict):
@@ -110,19 +121,25 @@ class SourcesFile:
                 names the offending key.
         """
         try:
-            data = tomllib.loads(self.path.read_text())
-        except tomllib.TOMLDecodeError as error:
+            data = tomllib.loads(self.path.read_text(encoding="utf-8"))
+        except OSError as error:
+            raise SourcesError(f"Cannot read {self.path}: {error.strerror}") from error
+        except (tomllib.TOMLDecodeError, UnicodeDecodeError) as error:
             raise SourcesError(f"{self.path} is not valid TOML: {error}") from error
         try:
             return Sources.model_validate(data)
         except ValidationError as error:
             first = error.errors()[0]
-            key = ".".join(str(p) for p in first["loc"] if not _is_union_branch(p))
+            key = ".".join(str(p) for p in first["loc"] if p not in _TAGS.values())
             raise SourcesError(f"{self.path}: invalid key {key}: {first['msg']}") from error
 
     def skill_count(self, collection: str) -> int:
-        """Count `SKILL.md` files under `skills/<collection>/` in the working tree."""
-        return sum(1 for _ in (self.root / "skills" / collection).rglob("SKILL.md"))
+        """Count skills under `skills/<collection>/` whose `SKILL.md` name matches its folder."""
+        return sum(
+            1
+            for skill_md in (self.root / "skills" / collection).rglob("SKILL.md")
+            if skill_name(skill_md.read_text(encoding="utf-8")) == skill_md.parent.name
+        )
 
     def overview(self) -> list["CollectionOverview"]:
         """Summarise every declared collection.
@@ -154,7 +171,3 @@ class CollectionOverview:
     upstream: str | None
     skills: int
     note: str | None
-
-
-def _is_union_branch(part: object) -> bool:
-    return part in {"GitHubUpstream", "LocalUpstream"}

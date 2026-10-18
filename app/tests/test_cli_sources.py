@@ -5,7 +5,7 @@ import pytest
 from syrupy.assertion import SnapshotAssertion
 from syrupy.extensions.image import SVGImageSnapshotExtension
 
-from .support import Run, skill_md
+from .support import FakeGitHub, Run, make_runner, skill_md
 
 SOURCES = """\
 version = 1
@@ -21,7 +21,7 @@ upstream = { local = "~/src/nextflow-skills" }
 note = "Private upstream."
 
 [collections.misc]
-note = "Internally maintained."
+note = "Internally maintained — ça marche."
 """
 
 
@@ -33,7 +33,10 @@ def catalog_repo(cwd: Path) -> Path:
         skill = cwd / "skills" / path
         skill.mkdir(parents=True)
         (skill / "SKILL.md").write_text(skill_md(skill.name, "d"))
-    (cwd / "skills" / "sources.toml").write_text(SOURCES)
+    example = cwd / "skills" / "misc" / "caveman" / "examples" / "demo"
+    example.mkdir(parents=True)
+    (example / "SKILL.md").write_text(skill_md("something-else", "an example, not a skill"))
+    (cwd / "skills" / "sources.toml").write_text(SOURCES, encoding="utf-8")
     return cwd
 
 
@@ -56,7 +59,7 @@ def test_sources_list_shows_every_collection_with_its_upstream(
             "kind": "none",
             "upstream": None,
             "skills": 1,
-            "note": "Internally maintained.",
+            "note": "Internally maintained — ça marche.",
         },
         {
             "collection": "nextflow",
@@ -75,9 +78,9 @@ def test_sources_list_shows_every_collection_with_its_upstream(
     ]
 
 
-def test_sources_list_works_from_a_subdirectory(catalog_repo: Path, github, home: Path) -> None:
-    from .support import make_runner
-
+def test_sources_list_works_from_a_subdirectory(
+    catalog_repo: Path, github: FakeGitHub, home: Path
+) -> None:
     out = make_runner(github, home, catalog_repo / "skills" / "misc")("sources", "list", "--json")
 
     assert [s["collection"] for s in out.json()] == [
@@ -100,8 +103,11 @@ def test_sources_list_table(
 @pytest.mark.parametrize(
     ("content", "message"),
     [
-        ("[collections.x]\nupstream = { github = 'not a repo' }\n", "collections.x.upstream"),
-        ("[collections.x]\nupstream = { svn = 'a/b' }\n", "collections.x.upstream"),
+        (
+            "[collections.x]\nupstream = { github = 'not a repo' }\n",
+            "collections.x.upstream.github",
+        ),
+        ("[collections.x]\nupstream = { svn = 'a/b' }\n", "expected github = "),
         ("[collections.x]\nnotes = 'typo'\n", "collections.x.notes"),
         ("[collections\n", "not valid TOML"),
     ],

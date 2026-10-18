@@ -6,7 +6,8 @@
   ┃ Collection  ┃ Kind   ┃ Upstream                      ┃ Skills ┃ Note                             ┃
   ┡━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
   │ mattpocock  │ github │ mattpocock/skills@main:skills │      2 │                                  │
-  │ misc        │ none   │ —                             │      1 │ Internally maintained.           │
+  │ misc        │ none   │ —                             │      1 │ Internally maintained — ça       │
+  │             │        │                               │        │ marche.                          │
   │ nextflow    │ local  │ ~/src/nextflow-skills         │      0 │ Private upstream.                │
   │ superpowers │ github │ obra/superpowers@main:skills  │      0 │                                  │
   └─────────────┴────────┴───────────────────────────────┴────────┴──────────────────────────────────┘

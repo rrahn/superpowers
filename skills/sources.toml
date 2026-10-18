@@ -1,9 +1,8 @@
 # Upstream sources of the skills curated under skills/<collection>/.
-# Read by `skillctl sources list` and `skillctl upstream check` (app/).
+# Read by `skillctl sources list` (app/).
 #
 # upstream = { github = "owner/name", ref = "main", path = "dir/in/repo" }  # public repo
 # upstream = { local = "/path/to/checkout" }                               # this machine only
-# [collections.<name>.skills.<skill>] overrides the upstream of one skill (provenance).
 version = 1
 
 [collections.mattpocock]
